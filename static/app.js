@@ -68,6 +68,36 @@ document.querySelectorAll('.heart').forEach(btn => btn.addEventListener('click',
   btn.textContent = btn.classList.contains('liked') ? '♥' : '♡';
 }));
 document.getElementById('startChat').addEventListener('click', () => openChat());
+document.querySelector('.composer-plus').addEventListener('click', async () => {
+  const scene = window.prompt('Describe a non-explicit portrait scene (for example: sunset cafe selfie):');
+  if (!scene || !scene.trim()) return;
+  const button = document.querySelector('.composer-plus');
+  button.disabled = true;
+  const pending = addMessage('Creating your portrait…', 'received');
+  try {
+    const response = await fetch('/api/selfie', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ character: activeCharacter, scene: scene.trim() })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || 'Image generation failed.');
+    pending.replaceChildren();
+    const image = document.createElement('img');
+    image.src = data.image;
+    image.alt = activeCharacter + ' portrait';
+    image.style.cssText = 'display:block;max-width:100%;width:280px;border-radius:14px;';
+    pending.appendChild(image);
+    const caption = document.createElement('small');
+    caption.textContent = 'AI-generated portrait';
+    pending.appendChild(caption);
+  } catch (error) {
+    pending.textContent = error.message || 'Image generation is not available yet.';
+  } finally {
+    button.disabled = false;
+    messages.scrollTop = messages.scrollHeight;
+  }
+});
 document.getElementById('exploreBtn').addEventListener('click', () => document.getElementById('characterGrid').scrollIntoView({ behavior: 'smooth' }));
 document.getElementById('allCharacters').addEventListener('click', () => document.getElementById('characterGrid').scrollIntoView({ behavior: 'smooth' }));
 document.getElementById('createCharacter').addEventListener('click', () => alert('Custom companion creation is coming soon.'));
