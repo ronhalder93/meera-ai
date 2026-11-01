@@ -299,13 +299,24 @@ async def generate_selfie(request: SelfieRequest):
             "sampler_name": "dpmpp_2m",
             "scheduler": "karras",
             "denoise": 1.0,
-            "model": ["1", 0],
+            "model": ["10", 0],
             "positive": ["2", 0],
             "negative": ["3", 0],
             "latent_image": ["4", 0],
         }},
         "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
         "7": {"class_type": "SaveImage", "inputs": {"filename_prefix": "meera", "images": ["6", 0]}},
+        "8": {"class_type": "LoadImage", "inputs": {"image": "meera-reference.png"}},
+        "9": {"class_type": "IPAdapterUnifiedLoader", "inputs": {"model": ["1", 0], "preset": "PLUS FACE (portraits)"}},
+        "10": {"class_type": "IPAdapter", "inputs": {
+            "model": ["9", 0],
+            "ipadapter": ["9", 1],
+            "image": ["8", 0],
+            "weight": 0.7,
+            "start_at": 0.0,
+            "end_at": 0.85,
+            "weight_type": "standard",
+        }},
     }
 
     auth = httpx.BasicAuth(bridge_user, bridge_password)
