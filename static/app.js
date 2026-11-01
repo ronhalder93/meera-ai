@@ -7,8 +7,19 @@ function storageKey(name) { return 'meera-chat-' + name.toLowerCase(); }
 function loadHistory(name) {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey(name)) || '[]');
-    chatHistory[name] = Array.isArray(saved) ? saved.slice(-30) : [];
+    chatHistory[name] = Array.isArray(saved)
+      ? saved.filter(item => item && typeof item.content === 'string' &&
+          !item.content.includes('OPENAI_API_KEY') &&
+          !item.content.includes('AI connection hasn’t been switched on yet.')).slice(-30)
+      : [];
+    saveHistory(name);
   } catch (_) { chatHistory[name] = []; }
+}
+function errorMessage(detail, fallback) {
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map(item => item && item.msg ? item.msg : JSON.stringify(item)).join('; ');
+  if (detail && typeof detail === 'object') return detail.message || detail.msg || JSON.stringify(detail);
+  return fallback;
 }
 function saveHistory(name) {
   try { localStorage.setItem(storageKey(name), JSON.stringify(chatHistory[name].slice(-30))); }
@@ -81,7 +92,7 @@ document.querySelector('.composer-plus').addEventListener('click', async () => {
       body: JSON.stringify({ character: activeCharacter, scene: scene.trim() })
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || 'Image generation failed.');
+    if (!response.ok) throw new Error(errorMessage(data.detail, 'Image generation failed.'));
     pending.replaceChildren();
     const image = document.createElement('img');
     image.src = data.image;
@@ -132,7 +143,7 @@ document.getElementById('chatForm').addEventListener('submit', async e => {
       body: JSON.stringify({ message, character: activeCharacter, history })
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || 'MEERA could not reply right now.');
+    if (!response.ok) throw new Error(errorMessage(data.detail, 'MEERA could not reply right now.'));
     pending.textContent = data.reply || 'I’m here. Tell me a little more.';
     chatHistory[activeCharacter].push({ role: 'assistant', content: pending.textContent });
     saveHistory(activeCharacter);
