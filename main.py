@@ -1,4 +1,5 @@
 import os
+import secrets
 from pathlib import Path
 from typing import Literal
 
@@ -176,7 +177,7 @@ async def generate_selfie(request: SelfieRequest):
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "EmptyLatentImage", "inputs": {"width": 1024, "height": 1024, "batch_size": 1}},
         "5": {"class_type": "KSampler", "inputs": {
-            "seed": 21001987 if character == "Meera" else 22001987, "steps": 24, "cfg": 6.0, "sampler_name": "dpmpp_2m",
+            "seed": secrets.randbelow(2**32), "steps": 24, "cfg": 6.0, "sampler_name": "dpmpp_2m",
             "scheduler": "karras", " denoise": 1.0,
             "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0]
         }},
