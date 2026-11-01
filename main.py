@@ -220,9 +220,9 @@ async def generate_selfie(request: SelfieRequest):
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "pony.safetensors"}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
-        "4": {"class_type": "EmptyLatentImage", "inputs": {"width": 1024, "height": 1024, "batch_size": 1}},
+        "4": {"class_type": "EmptyLatentImage", "inputs": {"width": 768, "height": 768, "batch_size": 1}},
         "5": {"class_type": "KSampler", "inputs": {
-            "seed": secrets.randbelow(2**32), "steps": 24, "cfg": 6.0, "sampler_name": "dpmpp_2m",
+            "seed": secrets.randbelow(2**32), "steps": 16, "cfg": 5.5, "sampler_name": "dpmpp_2m",
             "scheduler": "karras", " denoise": 1.0,
             "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0]
         }},
