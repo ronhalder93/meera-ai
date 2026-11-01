@@ -1,7 +1,76 @@
 const overlay = document.getElementById('chatOverlay');
 const messages = document.getElementById('messages');
 let activeCharacter = 'Meera';
-const chatHistory = { Meera: [], Aanya: [] };
+const chatHistory = { Meera: [], Aanya: [] };\n
+const GALLERY_DB = 'meera-private-gallery';
+const GALLERY_STORE = 'images';
+function openGalleryDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(GALLERY_DB, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(GALLERY_STORE, { keyPath: 'id' });
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+async function saveGalleryImage(item) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(GALLERY_STORE, 'readwrite');
+    tx.objectStore(GALLERY_STORE).put(item);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+async function getGalleryImages() {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(GALLERY_STORE, 'readonly');
+    const req = tx.objectStore(GALLERY_STORE).getAll();
+    req.onsuccess = () => { db.close(); resolve((req.result || []).sort((a,b) => b.createdAt-a.createdAt)); };
+    req.onerror = () => { db.close(); reject(req.error); };
+  });
+}
+async function deleteGalleryImage(id) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(GALLERY_STORE, 'readwrite');
+    tx.objectStore(GALLERY_STORE).delete(id);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+const galleryOverlay = document.createElement('div');
+galleryOverlay.className = 'gallery-overlay';
+galleryOverlay.innerHTML = '<section class="gallery-panel"><header><div><strong>My Gallery</strong><small>Private on this device</small></div><button type="button" aria-label="Close gallery">✕</button></header><div class="gallery-grid"></div></section>';
+document.body.appendChild(galleryOverlay);
+galleryOverlay.querySelector('header button').addEventListener('click', () => galleryOverlay.classList.remove('open'));
+galleryOverlay.addEventListener('click', e => { if (e.target === galleryOverlay) galleryOverlay.classList.remove('open'); });
+async function openGallery() {
+  galleryOverlay.classList.add('open');
+  const grid = galleryOverlay.querySelector('.gallery-grid');
+  grid.textContent = 'Loading your saved selfies…';
+  try {
+    const items = await getGalleryImages();
+    grid.replaceChildren();
+    if (!items.length) { grid.textContent = 'Your gallery is empty. Generate a selfie with the ＋ button in chat.'; return; }
+    items.forEach(item => {
+      const card = document.createElement('article');
+      card.className = 'gallery-card';
+      const image = document.createElement('img');
+      image.src = item.image; image.alt = item.character + ' saved selfie';
+      image.addEventListener('click', () => openImageViewer(item.image, image.alt));
+      const meta = document.createElement('div');
+      meta.className = 'gallery-meta';
+      const label = document.createElement('span');
+      label.textContent = item.character + ' · ' + new Date(item.createdAt).toLocaleDateString();
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.textContent = 'Delete';
+      remove.addEventListener('click', async () => { await deleteGalleryImage(item.id); card.remove(); if (!grid.children.length) grid.textContent = 'Your gallery is empty.'; });
+      meta.append(label, remove); card.append(image, meta); grid.append(card);
+    });
+  } catch (_) { grid.textContent = 'Gallery storage is unavailable in this browser.'; }
+}
+
 
 function storageKey(name) { return 'meera-chat-' + name.toLowerCase(); }
 function loadHistory(name) {
@@ -107,7 +176,7 @@ document.querySelectorAll('.companion-link').forEach(link => link.addEventListen
 }));
 document.getElementById('closeChat').addEventListener('click', closeChat);
 overlay.addEventListener('click', e => { if (e.target === overlay) closeChat(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeImageViewer(); closeChat(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeImageViewer(); closeChat(); galleryOverlay.classList.remove('open'); } });
 document.querySelectorAll('.heart').forEach(btn => btn.addEventListener('click', e => {
   e.stopPropagation();
   btn.classList.toggle('liked');
@@ -135,7 +204,7 @@ document.querySelector('.composer-plus').addEventListener('click', async () => {
     pending.appendChild(image);
     const caption = document.createElement('small');
     caption.textContent = 'AI-generated portrait';
-    pending.appendChild(caption);
+    pending.appendChild(caption);\n    try { await saveGalleryImage({ id: Date.now() + '-' + Math.random().toString(16).slice(2), character: activeCharacter, image: data.image, createdAt: Date.now() }); } catch (_) { /* Chat image remains available even if gallery storage is full. */ }
   } catch (error) {
     pending.textContent = error.message || 'Image generation is not available yet.';
   } finally {
@@ -150,7 +219,7 @@ document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('clic
   document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('crumb').textContent = btn.textContent.trim();
-  if (btn.dataset.view === 'gallery') alert('The private image gallery is not enabled yet.');
+  if (btn.dataset.view === 'gallery') openGallery();
   if (btn.dataset.view === 'chats') openChat();
 }));
 
