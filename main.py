@@ -154,10 +154,16 @@ async def generate_selfie(request: SelfieRequest):
 
     character = request.character if request.character in CHARACTERS else "Meera"
     # Keep the request within non-explicit fictional-adult portrait generation.
+    character_identity = {
+        "Meera": "same recurring fictional adult woman, 21 years old, oval face, warm expressive brown eyes, long dark wavy hair, tiny beauty mark on left cheek, soft natural makeup, friendly playful smile",
+        "Aanya": "same recurring fictional adult woman, 22 years old, heart-shaped face, dark brown eyes, shoulder-length black hair, subtle dimples, natural makeup, bright confident smile",
+    }
+    scene = request.scene if request.scene.strip() else "a casual close-up selfie in a cozy modern cafe, soft afternoon window light"
     prompt = (
-        f"photorealistic tasteful portrait of a fictional adult woman named {character}, "
-        f"{request.scene}, fully clothed, elegant casual fashion, natural face, "
-        "soft cinematic lighting, detailed eyes, high quality photography"
+        f"photorealistic portrait of {character_identity[character]}, "
+        f"{scene}, fully clothed, tasteful modern casual fashion, "
+        "consistent facial features, natural skin texture, soft cinematic lighting, "
+        "sharp detailed eyes, high quality portrait photography"
     )
     negative = (
         "nude, nudity, explicit, sexual content, lingerie, see-through clothing, "
@@ -170,7 +176,7 @@ async def generate_selfie(request: SelfieRequest):
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "EmptyLatentImage", "inputs": {"width": 1024, "height": 1024, "batch_size": 1}},
         "5": {"class_type": "KSampler", "inputs": {
-            "seed": 0, "steps": 24, "cfg": 6.0, "sampler_name": "dpmpp_2m",
+            "seed": 21001987 if character == "Meera" else 22001987, "steps": 24, "cfg": 6.0, "sampler_name": "dpmpp_2m",
             "scheduler": "karras", " denoise": 1.0,
             "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0]
         }},
