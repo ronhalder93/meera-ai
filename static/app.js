@@ -74,6 +74,22 @@ async function openGallery() {
 
 
 function storageKey(name) { return 'meera-chat-' + name.toLowerCase(); }
+function memoryKey(name) { return 'meera-memory-' + name.toLowerCase(); }
+function loadMemory(name) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(memoryKey(name)) || '[]');
+    return Array.isArray(saved) ? saved.filter(x => typeof x === 'string').slice(-30) : [];
+  } catch (_) { return []; }
+}
+function saveMemoryFact(name, message) {
+  const text = message.trim();
+  if (!/(\\bremember\\b|\\bmy name is\\b|\\bcall me\\b|\\bi like\\b|\\bi love\\b|\\bi prefer\\b|\\bi work\\b|\\bi study\\b|\\bmy favourite\\b|\\bmy favorite\\b|\\bi live in\\b)/i.test(text)) return;
+  const facts = loadMemory(name);
+  if (!facts.some(x => x.toLowerCase() === text.toLowerCase())) {
+    facts.push(text.slice(0, 300));
+    try { localStorage.setItem(memoryKey(name), JSON.stringify(facts.slice(-30))); } catch (_) {}
+  }
+}
 function loadHistory(name) {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey(name)) || '[]');
@@ -235,6 +251,7 @@ document.getElementById('chatForm').addEventListener('submit', async e => {
   addMessage(message, 'sent');
   chatHistory[activeCharacter].push({ role: 'user', content: message });
   saveHistory(activeCharacter);
+  saveMemoryFact(activeCharacter, message);
   input.value = '';
   input.disabled = true;
   const sendButton = document.querySelector('.send-button');
@@ -245,7 +262,7 @@ document.getElementById('chatForm').addEventListener('submit', async e => {
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, character: activeCharacter, history })
+      body: JSON.stringify({ message, character: activeCharacter, history, memory: loadMemory(activeCharacter) })
     });
     const data = await response.json();
     if (!response.ok) throw new Error(errorMessage(data.detail, 'MEERA could not reply right now.'));
