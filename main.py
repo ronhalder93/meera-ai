@@ -191,7 +191,7 @@ async def generate_selfie(request: SelfieRequest):
             history_data = None
             for _ in range(90):
                 await __import__("asyncio").sleep(2)
-                check = await client.get(f"{bridge_url}/history/{prompt_id}", headers=headers)
+                check = await client.get(f"{bridge_url}/history/{prompt_id}")
                 check.raise_for_status()
                 history_data = check.json().get(prompt_id)
                 if history_data and history_data.get("outputs"):
