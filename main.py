@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 BASE_DIR = Path(__file__).resolve().parent
+APP_VERSION = 2
 app = FastAPI(title="MEERA")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
@@ -81,6 +82,18 @@ async def health():
     return {
         "status": "ok",
         "app": "MEERA",
+        "version": APP_VERSION,
+        "image": {
+            "bridge_configured": bool(
+                os.getenv("COMFY_URL")
+                and os.getenv("COMFY_AUTH_USER")
+                and os.getenv("COMFY_AUTH_PASSWORD")
+            ),
+            "ckpt": os.getenv("COMFY_CKPT", "sd_xl_base_1.0.safetensors"),
+            "ref": os.getenv("COMFY_REF_IMAGE", "meera-reference.png"),
+            "ipadapter": os.getenv("COMFY_USE_IPADAPTER", "1") != "0",
+            "default_mode": "nude",
+        },
         "providers": {
             name: {
                 "configured": bool(os.getenv(config["key_env"])),
@@ -163,7 +176,7 @@ class SelfieRequest(BaseModel):
 
 @app.post("/api/selfie")
 async def generate_selfie(request: SelfieRequest):
-    """Generate a fictional-adult portrait/selfie through an authenticated ComfyUI bridge."""
+    """Generate a fictional-adult selfie through an authenticated ComfyUI bridge."""
     bridge_url = os.getenv("COMFY_URL", "").rstrip("/")
     bridge_user = os.getenv("COMFY_AUTH_USER", "")
     bridge_password = os.getenv("COMFY_AUTH_PASSWORD", "")
@@ -176,6 +189,7 @@ async def generate_selfie(request: SelfieRequest):
     character = request.character if request.character in CHARACTERS else "Meera"
     checkpoint = os.getenv("COMFY_CKPT", "sd_xl_base_1.0.safetensors")
     reference_image = os.getenv("COMFY_REF_IMAGE", "meera-reference.png")
+    use_ipadapter = os.getenv("COMFY_USE_IPADAPTER", "1") != "0"
 
     character_identity = {
         "Meera": (
@@ -209,6 +223,7 @@ async def generate_selfie(request: SelfieRequest):
         "one hand holding a coffee cup, relaxed cafe portrait",
         "sitting on the edge of the bed, phone held up at chest height, candid selfie",
         "standing with one hand in her hair, relaxed shoulders, confident look",
+        "topless selfie from the chest up, phone held high, relaxed expression",
     ]
     camera_options = [
         "eye-level camera angle, medium portrait framing",
@@ -283,23 +298,26 @@ async def generate_selfie(request: SelfieRequest):
             "jeans, sweater, jacket, fully dressed, thick clothing",
         ),
         "nude": (
-            "She is completely nude and naked. Bare skin, bare shoulders, bare collarbone, bare breasts, "
-            "natural body, no clothing at all.",
-            "clothed, dressed, clothes, fabric on body, swimsuit, bra",
+            "She is completely nude, fully undressed, no clothing at all. Bare skin, bare shoulders, "
+            "bare collarbone, bare breasts, bare hips, natural body.",
+            "clothed, dressed, clothes, shirt, t-shirt, pants, jeans, dress, bra, panties, "
+            "swimsuit, towel, blanket covering body, sheet covering body",
         ),
         "explicit": (
-            "She is completely nude in an explicit pose. Fully naked, bare skin, bare breasts, "
-            "visible anatomy, natural body, no clothing at all.",
-            "clothed, dressed, clothes, fabric on body, swimsuit, bra, censored",
+            "She is completely nude, fully naked, no clothing at all, explicit pose. Bare skin, "
+            "bare breasts, bare hips, visible anatomy, natural body.",
+            "clothed, dressed, clothes, shirt, t-shirt, pants, jeans, dress, bra, panties, "
+            "swimsuit, towel, blanket covering body, sheet covering body, censored, mosaic",
         ),
     }
     mode_desc, mode_negative = mode_style[request.mode]
 
     prompt = (
-        "Photorealistic, high-quality candid selfie photograph of "
+        "nude, photorealistic, high-quality candid selfie photograph of "
         f"{character_identity[character]}. "
+        f"{mode_desc} "
         f"Scene: {scene}. Pose: {chosen_pose}. Camera: {chosen_camera}. "
-        f"{mode_desc} Expression: {chosen_expression}. "
+        f"Expression: {chosen_expression}. "
         f"Background: {chosen_background}. Lighting: {chosen_lighting}. "
         "Shot on a phone camera, natural skin texture with visible pores, realistic anatomy, "
         "detailed eyes, consistent facial identity, sharp focus on the face, slight grain."
@@ -319,29 +337,37 @@ async def generate_selfie(request: SelfieRequest):
         "5": {"class_type": "KSampler", "inputs": {
             "seed": secrets.randbelow(2**32),
             "steps": 30,
-            "cfg": 6.5,
+            "cfg": 7.5,
             "sampler_name": "dpmpp_2m",
             "scheduler": "karras",
             "denoise": 1.0,
-            "model": ["10", 0],
+            "model": ["10", 0] if use_ipadapter else ["1", 0],
             "positive": ["2", 0],
             "negative": ["3", 0],
             "latent_image": ["4", 0],
         }},
         "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
         "7": {"class_type": "SaveImage", "inputs": {"filename_prefix": "meera", "images": ["6", 0]}},
-        "8": {"class_type": "LoadImage", "inputs": {"image": reference_image}},
-        "9": {"class_type": "IPAdapterUnifiedLoader", "inputs": {"model": ["1", 0], "preset": "PLUS FACE (portraits)"}},
-        "10": {"class_type": "IPAdapter", "inputs": {
-            "model": ["9", 0],
-            "ipadapter": ["9", 1],
-            "image": ["8", 0],
-            "weight": 0.7,
-            "start_at": 0.0,
-            "end_at": 0.85,
-            "weight_type": "standard",
-        }},
     }
+
+    if use_ipadapter:
+        workflow["8"] = {"class_type": "LoadImage", "inputs": {"image": reference_image}}
+        workflow["9"] = {
+            "class_type": "IPAdapterUnifiedLoader",
+            "inputs": {"model": ["1", 0], "preset": "PLUS FACE (portraits)"},
+        }
+        workflow["10"] = {
+            "class_type": "IPAdapter",
+            "inputs": {
+                "model": ["9", 0],
+                "ipadapter": ["9", 1],
+                "image": ["8", 0],
+                "weight": 0.45,
+                "start_at": 0.0,
+                "end_at": 0.6,
+                "weight_type": "standard",
+            },
+        }
 
     auth = httpx.BasicAuth(bridge_user, bridge_password)
     async with httpx.AsyncClient(timeout=180.0, auth=auth) as client:
@@ -381,7 +407,12 @@ async def generate_selfie(request: SelfieRequest):
             image_response.raise_for_status()
             encoded = base64.b64encode(image_response.content).decode("ascii")
             media_type = image_response.headers.get("content-type", "image/png")
-            return {"character": character, "mode": request.mode, "image": f"data:{media_type};base64,{encoded}"}
+            return {
+                "character": character,
+                "mode": request.mode,
+                "image": f"data:{media_type};base64,{encoded}",
+                "prompt": prompt,
+            }
         except HTTPException:
             raise
         except (httpx.HTTPError, KeyError, ValueError) as exc:
