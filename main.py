@@ -1,5 +1,6 @@
 import os
 import secrets
+import random
 from pathlib import Path
 from typing import Literal
 
@@ -160,9 +161,29 @@ async def generate_selfie(request: SelfieRequest):
         "Aanya": "same recurring fictional adult woman, 22 years old, heart-shaped face, dark brown eyes, shoulder-length black hair, subtle dimples, natural makeup, bright confident smile",
     }
     scene = request.scene if request.scene.strip() else "a casual close-up selfie in a cozy modern cafe, soft afternoon window light"
+    pose_options = [
+        "standing three-quarter pose, one hand gently resting near the waist, looking at the camera",
+        "seated casually with legs crossed, shoulders relaxed, smiling toward the camera",
+        "over-the-shoulder portrait, head turned back toward the camera",
+        "side-profile pose, softly turning her face toward the camera",
+        "walking candid pose, natural movement, looking slightly to the side",
+        "sitting by a window, one hand lightly touching her hair",
+        "close-up selfie with a gentle head tilt and a playful smile",
+        "standing with arms loosely folded, confident relaxed expression",
+        "looking down briefly and smiling, candid editorial portrait",
+        "one hand holding a coffee cup, relaxed cafe portrait"
+    ]
+    camera_options = [
+        "eye-level camera angle, medium portrait framing",
+        "slightly high camera angle, waist-up framing",
+        "three-quarter body framing, natural perspective",
+        "close portrait framing, soft background depth"
+    ]
+    chosen_pose = random.SystemRandom().choice(pose_options)
+    chosen_camera = random.SystemRandom().choice(camera_options)
     prompt = (
         f"photorealistic portrait of {character_identity[character]}, "
-        f"{scene}, fully clothed, tasteful modern casual fashion, "
+        f"{scene}, {chosen_pose}, {chosen_camera}, fully clothed, tasteful modern casual fashion, "
         "consistent facial features, natural skin texture, soft cinematic lighting, "
         "sharp detailed eyes, high quality portrait photography"
     )
