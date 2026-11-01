@@ -1,34 +1,120 @@
-const overlay=document.getElementById('chatOverlay');
-const messages=document.getElementById('messages');
-let activeCharacter='Meera';
-function openChat(name='Meera'){
-  activeCharacter=name;
-  const initial=name==='Aanya'?'A':'M';
-  document.getElementById('chatName').textContent=name;
-  document.getElementById('chatAvatar').textContent=initial;
-  document.getElementById('chatLargeAvatar').textContent=initial;
-  document.getElementById('chatWelcome').textContent='A little hello from '+name;
-  messages.innerHTML='<div class="message received">Hey! I\'m glad you\'re here. How\'s your day going?<small>Just now</small></div>';
-  overlay.classList.add('open');overlay.setAttribute('aria-hidden','false');
-  setTimeout(()=>document.getElementById('messageInput').focus(),100);
+const overlay = document.getElementById('chatOverlay');
+const messages = document.getElementById('messages');
+let activeCharacter = 'Meera';
+const chatHistory = { Meera: [], Aanya: [] };
+
+function storageKey(name) { return 'meera-chat-' + name.toLowerCase(); }
+function loadHistory(name) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey(name)) || '[]');
+    chatHistory[name] = Array.isArray(saved) ? saved.slice(-30) : [];
+  } catch (_) { chatHistory[name] = []; }
 }
-function closeChat(){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true')}
-document.querySelectorAll('[data-open]').forEach(card=>card.addEventListener('click',()=>openChat(card.dataset.open)));
-document.querySelectorAll('.companion-link').forEach(link=>link.addEventListener('click',()=>{document.querySelectorAll('.companion-link').forEach(x=>x.classList.remove('selected'));link.classList.add('selected');openChat(link.dataset.character)}));
-document.getElementById('closeChat').addEventListener('click',closeChat);
-overlay.addEventListener('click',e=>{if(e.target===overlay)closeChat()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeChat()});
-document.querySelectorAll('.heart').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();btn.classList.toggle('liked');btn.textContent=btn.classList.contains('liked')?'♥':'♡'}));
-document.getElementById('startChat').addEventListener('click',()=>openChat());
-document.getElementById('exploreBtn').addEventListener('click',()=>document.getElementById('characterGrid').scrollIntoView({behavior:'smooth'}));
-document.getElementById('allCharacters').addEventListener('click',()=>document.getElementById('characterGrid').scrollIntoView({behavior:'smooth'}));
-document.getElementById('createCharacter').addEventListener('click',()=>alert('Character creation is coming in the next build.'));
-document.querySelectorAll('.nav-item').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.getElementById('crumb').textContent=btn.textContent.trim();if(btn.dataset.view==='gallery')alert('Your private gallery is coming in the next build.');if(btn.dataset.view==='chats')openChat()}));
-document.getElementById('chatForm').addEventListener('submit',async e=>{
-  e.preventDefault();const input=document.getElementById('messageInput');const text=input.value.trim();if(!text)return;
-  const sent=document.createElement('div');sent.className='message sent';sent.textContent=text;messages.appendChild(sent);input.value='';messages.scrollTop=messages.scrollHeight;
-  const pending=document.createElement('div');pending.className='message received';pending.textContent='Thinking…';messages.appendChild(pending);messages.scrollTop=messages.scrollHeight;
-  try{const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,character:activeCharacter})});const data=await response.json();pending.textContent=data.reply;const note=document.createElement('small');note.textContent='Demo reply';pending.appendChild(note)}
-  catch(error){pending.textContent='I’m here with you. The demo server could not be reached just now.'}
-  messages.scrollTop=messages.scrollHeight;
+function saveHistory(name) {
+  try { localStorage.setItem(storageKey(name), JSON.stringify(chatHistory[name].slice(-30))); }
+  catch (_) { /* Local storage may be unavailable or full. */ }
+}
+function addMessage(text, kind, stamp) {
+  const node = document.createElement('div');
+  node.className = 'message ' + kind;
+  node.textContent = text;
+  if (stamp) {
+    const small = document.createElement('small');
+    small.textContent = stamp;
+    node.appendChild(small);
+  }
+  messages.appendChild(node);
+  messages.scrollTop = messages.scrollHeight;
+  return node;
+}
+function renderHistory(name) {
+  messages.replaceChildren();
+  if (!chatHistory[name].length) {
+    addMessage('Hey! I\'m glad you\'re here. How\'s your day going?', 'received', 'Just now');
+    return;
+  }
+  chatHistory[name].forEach(item => addMessage(item.content, item.role === 'user' ? 'sent' : 'received'));
+}
+function openChat(name = 'Meera') {
+  activeCharacter = name === 'Aanya' ? 'Aanya' : 'Meera';
+  loadHistory(activeCharacter);
+  const initial = activeCharacter === 'Aanya' ? 'A' : 'M';
+  document.getElementById('chatName').textContent = activeCharacter;
+  document.getElementById('chatAvatar').textContent = initial;
+  document.getElementById('chatLargeAvatar').textContent = initial;
+  document.getElementById('chatWelcome').textContent = 'A little hello from ' + activeCharacter;
+  renderHistory(activeCharacter);
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+  setTimeout(() => document.getElementById('messageInput').focus(), 100);
+}
+function closeChat() {
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+}
+
+document.querySelectorAll('[data-open]').forEach(card => card.addEventListener('click', () => openChat(card.dataset.open)));
+document.querySelectorAll('.companion-link').forEach(link => link.addEventListener('click', () => {
+  document.querySelectorAll('.companion-link').forEach(x => x.classList.remove('selected'));
+  link.classList.add('selected');
+  openChat(link.dataset.character);
+}));
+document.getElementById('closeChat').addEventListener('click', closeChat);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeChat(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeChat(); });
+document.querySelectorAll('.heart').forEach(btn => btn.addEventListener('click', e => {
+  e.stopPropagation();
+  btn.classList.toggle('liked');
+  btn.textContent = btn.classList.contains('liked') ? '♥' : '♡';
+}));
+document.getElementById('startChat').addEventListener('click', () => openChat());
+document.getElementById('exploreBtn').addEventListener('click', () => document.getElementById('characterGrid').scrollIntoView({ behavior: 'smooth' }));
+document.getElementById('allCharacters').addEventListener('click', () => document.getElementById('characterGrid').scrollIntoView({ behavior: 'smooth' }));
+document.getElementById('createCharacter').addEventListener('click', () => alert('Custom companion creation is coming soon.'));
+document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('crumb').textContent = btn.textContent.trim();
+  if (btn.dataset.view === 'gallery') alert('The private image gallery is not enabled yet.');
+  if (btn.dataset.view === 'chats') openChat();
+}));
+
+document.getElementById('chatForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const input = document.getElementById('messageInput');
+  const message = input.value.trim();
+  if (!message) return;
+
+  const history = chatHistory[activeCharacter].slice(-20);
+  addMessage(message, 'sent');
+  chatHistory[activeCharacter].push({ role: 'user', content: message });
+  saveHistory(activeCharacter);
+  input.value = '';
+  input.disabled = true;
+  const sendButton = document.querySelector('.send-button');
+  sendButton.disabled = true;
+  const pending = addMessage('Thinking…', 'received');
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, character: activeCharacter, history })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || 'MEERA could not reply right now.');
+    pending.textContent = data.reply || 'I’m here. Tell me a little more.';
+    chatHistory[activeCharacter].push({ role: 'assistant', content: pending.textContent });
+    saveHistory(activeCharacter);
+  } catch (error) {
+    pending.textContent = error.message || 'The server could not be reached. Please try again.';
+    // Remove the unanswered user turn so it is not sent as completed conversation context.
+    chatHistory[activeCharacter].pop();
+    saveHistory(activeCharacter);
+  } finally {
+    input.disabled = false;
+    sendButton.disabled = false;
+    input.focus();
+    messages.scrollTop = messages.scrollHeight;
+  }
 });
