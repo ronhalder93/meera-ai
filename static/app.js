@@ -130,7 +130,7 @@ document.querySelector('.composer-plus').addEventListener('click', async () => {
     const image = document.createElement('img');
     image.src = data.image;
     image.alt = activeCharacter + ' portrait';
-    image.style.cssText = 'display:block;max-width:100%;width:280px;border-radius:14px;cursor:zoom-in;';
+    image.style.cssText = 'display:block;width:min(100%,420px);height:auto;max-height:70vh;object-fit:contain;border-radius:16px;cursor:zoom-in;';
     image.addEventListener('click', () => openImageViewer(image.src, image.alt));
     pending.appendChild(image);
     const caption = document.createElement('small');
