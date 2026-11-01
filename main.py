@@ -158,12 +158,12 @@ async def chat(request: ChatRequest):
 class SelfieRequest(BaseModel):
     character: str = "Meera"
     scene: str = Field(default="", max_length=1200)
-    mode: Literal["portrait"] = "portrait"
+    mode: Literal["portrait", "lingerie", "nude", "explicit"] = "nude"
 
 
 @app.post("/api/selfie")
 async def generate_selfie(request: SelfieRequest):
-    """Generate a fictional-adult portrait through an authenticated ComfyUI bridge."""
+    """Generate a fictional-adult portrait/selfie through an authenticated ComfyUI bridge."""
     bridge_url = os.getenv("COMFY_URL", "").rstrip("/")
     bridge_user = os.getenv("COMFY_AUTH_USER", "")
     bridge_password = os.getenv("COMFY_AUTH_PASSWORD", "")
@@ -174,6 +174,8 @@ async def generate_selfie(request: SelfieRequest):
         )
 
     character = request.character if request.character in CHARACTERS else "Meera"
+    checkpoint = os.getenv("COMFY_CKPT", "sd_xl_base_1.0.safetensors")
+    reference_image = os.getenv("COMFY_REF_IMAGE", "meera-reference.png")
 
     character_identity = {
         "Meera": (
@@ -205,6 +207,8 @@ async def generate_selfie(request: SelfieRequest):
         "standing in front of a mirror holding the phone up for a selfie",
         "leaning against a wall, one knee slightly bent, confident stance",
         "one hand holding a coffee cup, relaxed cafe portrait",
+        "sitting on the edge of the bed, phone held up at chest height, candid selfie",
+        "standing with one hand in her hair, relaxed shoulders, confident look",
     ]
     camera_options = [
         "eye-level camera angle, medium portrait framing",
@@ -212,6 +216,7 @@ async def generate_selfie(request: SelfieRequest):
         "three-quarter body framing, natural perspective",
         "close portrait framing, soft background depth",
         "full-body framing, phone-camera perspective",
+        "slightly low angle, full-body framing",
     ]
     outfit_options = [
         "a pastel pink cardigan with jeans",
@@ -233,6 +238,7 @@ async def generate_selfie(request: SelfieRequest):
         "warm friendly smile",
         "subtle cute pout",
         "flirty half-smile",
+        "sleepy relaxed expression",
     ]
     background_options = [
         "sunlit cafe",
@@ -247,6 +253,7 @@ async def generate_selfie(request: SelfieRequest):
         "minimal pastel photo studio",
         "messy bed with white sheets",
         "hotel room with warm lamps",
+        "bathroom mirror with soft light",
     ]
     lighting_options = [
         "soft morning window light",
@@ -255,6 +262,7 @@ async def generate_selfie(request: SelfieRequest):
         "moody cinematic evening light",
         "bright natural daylight",
         "warm lamp light with soft shadows",
+        "dim cozy bedroom light",
     ]
 
     rng = random.SystemRandom()
@@ -265,25 +273,46 @@ async def generate_selfie(request: SelfieRequest):
     chosen_background = rng.choice(background_options)
     chosen_lighting = rng.choice(lighting_options)
 
-    mode_desc = "wearing " + chosen_outfit
+    mode_style = {
+        "portrait": (
+            f"Outfit: wearing {chosen_outfit}. She is fully clothed in tasteful everyday fashion.",
+            "nude, naked, lingerie, exposed breasts, bare midriff",
+        ),
+        "lingerie": (
+            "Outfit: black lace lingerie, matching bra and panties. Bare shoulders, bare midriff, bare legs, bare feet.",
+            "jeans, sweater, jacket, fully dressed, thick clothing",
+        ),
+        "nude": (
+            "She is completely nude and naked. Bare skin, bare shoulders, bare collarbone, bare breasts, "
+            "natural body, no clothing at all.",
+            "clothed, dressed, clothes, fabric on body, swimsuit, bra",
+        ),
+        "explicit": (
+            "She is completely nude in an explicit pose. Fully naked, bare skin, bare breasts, "
+            "visible anatomy, natural body, no clothing at all.",
+            "clothed, dressed, clothes, fabric on body, swimsuit, bra, censored",
+        ),
+    }
+    mode_desc, mode_negative = mode_style[request.mode]
 
     prompt = (
-        "Photorealistic, high-quality fashion portrait photograph of "
+        "Photorealistic, high-quality candid selfie photograph of "
         f"{character_identity[character]}. "
         f"Scene: {scene}. Pose: {chosen_pose}. Camera: {chosen_camera}. "
-        f"Outfit: {mode_desc}. Expression: {chosen_expression}. "
+        f"{mode_desc} Expression: {chosen_expression}. "
         f"Background: {chosen_background}. Lighting: {chosen_lighting}. "
-        "The adult woman is fully clothed in tasteful everyday fashion; "
-        "natural skin texture, realistic anatomy, detailed eyes, consistent facial identity."
+        "Shot on a phone camera, natural skin texture with visible pores, realistic anatomy, "
+        "detailed eyes, consistent facial identity, sharp focus on the face, slight grain."
     )
     negative = (
-        "nudity, nude, naked, lingerie, underwear, exposed breasts, explicit sexual content, "
-        "badly drawn face, deformed hands, extra fingers, extra limbs, blurry, low quality, "
-        "watermark, text, child, teenager"
+        "badly drawn face, deformed hands, extra fingers, missing fingers, extra limbs, "
+        "fused limbs, deformed body, extra breasts, blurry, low quality, watermark, text, "
+        "child, teenager, doll-like face, plastic skin, "
+        + mode_negative
     )
 
     workflow = {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "sd_xl_base_1.0.safetensors"}},
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "EmptyLatentImage", "inputs": {"width": 832, "height": 1216, "batch_size": 1}},
@@ -301,7 +330,7 @@ async def generate_selfie(request: SelfieRequest):
         }},
         "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
         "7": {"class_type": "SaveImage", "inputs": {"filename_prefix": "meera", "images": ["6", 0]}},
-        "8": {"class_type": "LoadImage", "inputs": {"image": "meera-reference.png"}},
+        "8": {"class_type": "LoadImage", "inputs": {"image": reference_image}},
         "9": {"class_type": "IPAdapterUnifiedLoader", "inputs": {"model": ["1", 0], "preset": "PLUS FACE (portraits)"}},
         "10": {"class_type": "IPAdapter", "inputs": {
             "model": ["9", 0],
