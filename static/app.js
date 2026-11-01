@@ -80,16 +80,14 @@ document.querySelectorAll('.heart').forEach(btn => btn.addEventListener('click',
 }));
 document.getElementById('startChat').addEventListener('click', () => openChat());
 document.querySelector('.composer-plus').addEventListener('click', async () => {
-  const scene = window.prompt('Describe a non-explicit portrait scene (for example: sunset cafe selfie):');
-  if (!scene || !scene.trim()) return;
   const button = document.querySelector('.composer-plus');
   button.disabled = true;
-  const pending = addMessage('Creating your portrait…', 'received');
+  const pending = addMessage(activeCharacter + ' is taking a selfie…', 'received');
   try {
     const response = await fetch('/api/selfie', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ character: activeCharacter, scene: scene.trim() })
+      body: JSON.stringify({ character: activeCharacter })
     });
     const data = await response.json();
     if (!response.ok) throw new Error(errorMessage(data.detail, 'Image generation failed.'));
