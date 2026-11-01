@@ -133,3 +133,98 @@ async def chat(request: ChatRequest):
         status_code=502,
         detail="Both configured AI providers failed or rejected the request. Check provider key, model access, and account limits.",
     )
+
+
+class SelfieRequest(BaseModel):
+    character: str = "Meera"
+    scene: str = Field(default="a warm, natural indoor portrait", min_length=3, max_length=300)
+
+
+@app.post("/api/selfie")
+async def generate_selfie(request: SelfieRequest):
+    """Generate a non-explicit fictional-adult portrait through an authenticated ComfyUI bridge."""
+    bridge_url = os.getenv("COMFY_URL", "").rstrip("/")
+    bridge_token = os.getenv("COMFY_API_TOKEN", "")
+    if not bridge_url or not bridge_token:
+        raise HTTPException(
+            status_code=503,
+            detail="Image generation is not connected yet. Configure COMFY_URL and COMFY_API_TOKEN in Render.",
+        )
+
+    character = request.character if request.character in CHARACTERS else "Meera"
+    # Keep the request within non-explicit fictional-adult portrait generation.
+    prompt = (
+        f"photorealistic tasteful portrait of a fictional adult woman named {character}, "
+        f"{request.scene}, fully clothed, elegant casual fashion, natural face, "
+        "soft cinematic lighting, detailed eyes, high quality photography"
+    )
+    negative = (
+        "nude, nudity, explicit, sexual content, lingerie, see-through clothing, "
+        "underage, child, teenager, poorly drawn face, extra fingers, blurry, watermark"
+    )
+
+    workflow = {
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "pony.safetensors"}},
+        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
+        "4": {"class_type": "EmptyLatentImage", "inputs": {"width": 1024, "height": 1024, "batch_size": 1}},
+        "5": {"class_type": "KSampler", "inputs": {
+            "seed": 0, "steps": 24, "cfg": 6.0, "sampler_name": "dpmpp_2m",
+            "scheduler": "karras", " denoise": 1.0,
+            "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0]
+        }},
+        "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
+        "7": {"class_type": "SaveImage", "inputs": {"filename_prefix": "meera", "images": ["6", 0]}}
+    }
+    # Correct the sampler input key spelling before submitting to ComfyUI.
+    workflow["5"]["inputs"].pop(" denoise", None)
+    workflow["5"]["inputs"]["denoise"] = 1.0
+
+    headers = {"Authorization": f"Bearer {bridge_token}"}
+    async with httpx.AsyncClient(timeout=180.0) as client:
+        try:
+            queued = await client.post(f"{bridge_url}/prompt", json={"prompt": workflow}, headers=headers)
+            queued.raise_for_status()
+            prompt_id = queued.json()["prompt_id"]
+
+            history_data = None
+            for _ in range(90):
+                await __import__("asyncio").sleep(2)
+                check = await client.get(f"{bridge_url}/history/{prompt_id}", headers=headers)
+                check.raise_for_status()
+                history_data = check.json().get(prompt_id)
+                if history_data and history_data.get("outputs"):
+                    break
+            if not history_data or not history_data.get("outputs"):
+                raise HTTPException(status_code=504, detail="Image generation timed out. Please try again.")
+
+            image_info = None
+            for node_output in history_data["outputs"].values():
+                images = node_output.get("images", [])
+                if images:
+                    image_info = images[0]
+                    break
+            if not image_info:
+                raise HTTPException(status_code=502, detail="ComfyUI finished but returned no image.")
+
+            image_response = await client.get(
+                f"{bridge_url}/view",
+                params={
+                    "filename": image_info["filename"],
+                    "subfolder": image_info.get("subfolder", ""),
+                    "type": image_info.get("type", "output"),
+                },
+                headers=headers,
+            )
+            image_response.raise_for_status()
+            import base64
+            encoded = base64.b64encode(image_response.content).decode("ascii")
+            media_type = image_response.headers.get("content-type", "image/png")
+            return {"character": character, "image": f"data:{media_type};base64,{encoded}"}
+        except HTTPException:
+            raise
+        except (httpx.HTTPError, KeyError, ValueError) as exc:
+            raise HTTPException(
+                status_code=502,
+                detail="The authenticated image bridge could not complete the request. Check the Kaggle bridge and ComfyUI logs.",
+            ) from exc
