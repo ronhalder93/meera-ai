@@ -137,7 +137,7 @@ async def chat(request: ChatRequest):
 
 class SelfieRequest(BaseModel):
     character: str = "Meera"
-    scene: str = Field(default="a warm, natural indoor portrait", min_length=3, max_length=300)
+    scene: str = Field(default="a warm, natural indoor portrait", min_length=3, max_length=1200)
 
 
 @app.post("/api/selfie")
