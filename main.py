@@ -157,7 +157,7 @@ async def generate_selfie(request: SelfieRequest):
     character = request.character if request.character in CHARACTERS else "Meera"
     # Keep the request within non-explicit fictional-adult portrait generation.
     character_identity = {
-        "Meera": "same recurring fictional adult woman, exactly 18 years old (adult), oval face, cute youthful-adult features, warm smile, stylish attractive look, warm expressive brown eyes, long dark wavy hair, tiny beauty mark on left cheek, soft natural makeup, friendly playful smile",
+        "Meera": "same recurring fictional adult woman, exactly 18 years old (adult), oval face, cute youthful-adult features, naturally curvy adult figure with a fuller bust and realistic body proportions, warm smile, stylish attractive look, warm expressive brown eyes, long dark wavy hair, tiny beauty mark on left cheek, soft natural makeup, friendly playful smile",
         "Aanya": "same recurring fictional adult woman, exactly 18 years old (adult), heart-shaped face, cute youthful-adult features, warm smile, stylish attractive look, dark brown eyes, shoulder-length black hair, subtle dimples, natural makeup, bright confident smile",
     }
     scene = request.scene if request.scene.strip() else "a casual close-up selfie in a cozy modern cafe, soft afternoon window light"
