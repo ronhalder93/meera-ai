@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#120e20">
+  <meta name="description" content="MEERA — a little more connection, every day.">
+  <title>MEERA — Your AI companion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#"><span class="brand-mark">m</span><span>meera<span class="brand-dot">.</span></span></a>
+      <div class="side-label">YOUR SPACE</div>
+      <button class="nav-item active" data-view="discover"><span class="nav-icon">✧</span> Discover</button>
+      <button class="nav-item" data-view="chats"><span class="nav-icon">▤</span> My chats <span class="nav-count">2</span></button>
+      <button class="nav-item" data-view="gallery"><span class="nav-icon">▧</span> Gallery</button>
+      <div class="side-label characters-label">YOUR COMPANIONS <button class="tiny-plus" aria-label="Add companion">+</button></div>
+      <button class="companion-link selected" data-character="Meera"><span class="mini-avatar avatar-meera">M</span><span>Meera</span><i></i></button>
+      <button class="companion-link" data-character="Aanya"><span class="mini-avatar avatar-aanya">A</span><span>Aanya</span></button>
+      <div class="sidebar-bottom"><div class="upgrade-card"><div class="sparkle">✦</div><strong>Your story starts here</strong><p>Make room for a little more connection.</p><button id="exploreBtn">Explore MEERA</button></div><div class="profile-row"><div class="profile-avatar">Y</div><div><strong>Your space</strong><small>Personal account</small></div><span class="more">···</span></div></div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar"><div class="mobile-brand">meera<span>.</span></div><div class="breadcrumb">Your space <span>/</span> <b id="crumb">Discover</b></div><div class="top-actions"><button class="icon-button" aria-label="Notifications">♧</button><button class="user-pill"><span class="online-dot"></span> Online</button></div></header>
+      <section class="welcome"><div><div class="eyebrow"><span></span> A SPACE THAT'S YOURS</div><h1>Connection, on <em>your</em> terms.</h1><p>Meet someone new, pick up where you left off, and make every conversation yours.</p></div><div class="welcome-orb"><div class="orb-core">m</div><span class="orb-star star-a">✦</span><span class="orb-star star-b">✧</span></div></section>
+      <section class="section-head"><div><div class="eyebrow">HANDPICKED FOR YOU</div><h2>Meet your next favourite person</h2></div><button class="text-button" id="allCharacters">View all <span>↗</span></button></section>
+      <section class="character-grid" id="characterGrid">
+        <article class="character-card featured" data-open="Meera">
+          <div class="portrait portrait-meera"><div class="portrait-glow"></div><div class="portrait-person">M</div><span class="availability"><i></i> Here for you</span><span class="portrait-tag">COMMUNITY FAVOURITE</span><button class="heart" aria-label="Favourite Meera">♡</button></div>
+          <div class="character-info"><div><h3>Meera <span class="verified">✦</span></h3><p>Warm-hearted · Playful · Curious</p></div><button class="round-arrow" aria-label="Chat with Meera">↗</button></div><p class="character-bio">The kind of company that makes an ordinary day feel a little brighter.</p>
+        </article>
+        <article class="character-card" data-open="Aanya">
+          <div class="portrait portrait-aanya"><div class="portrait-glow"></div><div class="portrait-person">A</div><span class="availability"><i></i> Available</span><button class="heart" aria-label="Favourite Aanya">♡</button></div>
+          <div class="character-info"><div><h3>Aanya</h3><p>Creative · Witty · Adventurous</p></div><button class="round-arrow" aria-label="Chat with Aanya">↗</button></div><p class="character-bio">Always has a story, a playlist, or a spontaneous plan to share.</p>
+        </article>
+        <article class="create-card"><div class="create-symbol">＋</div><h3>Your imagination,<br>your companion.</h3><p>Create a character with a personality that's uniquely yours.</p><button id="createCharacter">Create a companion <span>↗</span></button><small>COMING SOON</small></article>
+      </section>
+      <section class="bottom-banner"><div class="banner-icon">✧</div><div><strong>A conversation can change your day.</strong><p>Say hello to someone who’s happy to hear from you.</p></div><button id="startChat">Start a conversation <span>→</span></button></section>
+      <footer>MEERA <span>·</span> A little more connection, every day. <span class="footer-right">A demo experience · 18+ fictional characters</span></footer>
+    </main>
+  </div>
+
+  <div class="chat-overlay" id="chatOverlay" aria-hidden="true">
+    <section class="chat-panel">
+      <header class="chat-header"><button class="back-button" id="closeChat">←</button><div class="chat-person-avatar" id="chatAvatar">M</div><div class="chat-person"><strong id="chatName">Meera</strong><small><i></i> Online now</small></div><button class="icon-button chat-menu" aria-label="More options">···</button></header>
+      <div class="chat-intro"><div class="chat-large-avatar" id="chatLargeAvatar">M</div><h2 id="chatWelcome">A little hello from Meera</h2><p>Your conversation starts here. Be yourself.</p><span class="date-chip">TODAY</span></div>
+      <div class="messages" id="messages"><div class="message received">Hey! I'm glad you're here. How's your day going?<small>Just now</small></div></div>
+      <form class="composer" id="chatForm"><button type="button" class="composer-plus" title="Attachments coming soon">＋</button><input id="messageInput" autocomplete="off" placeholder="Write something..." maxlength="1000" aria-label="Your message"><button class="send-button" type="submit" aria-label="Send message">↑</button></form>
+      <div class="chat-disclaimer">MEERA demo · AI responses are illustrative, not a real person.</div>
+    </section>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
