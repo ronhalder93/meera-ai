@@ -157,8 +157,8 @@ async def generate_selfie(request: SelfieRequest):
     character = request.character if request.character in CHARACTERS else "Meera"
     # Keep the request within non-explicit fictional-adult portrait generation.
     character_identity = {
-        "Meera": "same recurring fictional adult woman, 21 years old, oval face, warm expressive brown eyes, long dark wavy hair, tiny beauty mark on left cheek, soft natural makeup, friendly playful smile",
-        "Aanya": "same recurring fictional adult woman, 22 years old, heart-shaped face, dark brown eyes, shoulder-length black hair, subtle dimples, natural makeup, bright confident smile",
+        "Meera": "same recurring fictional adult woman, exactly 18 years old (adult), oval face, cute youthful-adult features, warm smile, stylish attractive look, warm expressive brown eyes, long dark wavy hair, tiny beauty mark on left cheek, soft natural makeup, friendly playful smile",
+        "Aanya": "same recurring fictional adult woman, exactly 18 years old (adult), heart-shaped face, cute youthful-adult features, warm smile, stylish attractive look, dark brown eyes, shoulder-length black hair, subtle dimples, natural makeup, bright confident smile",
     }
     scene = request.scene if request.scene.strip() else "a casual close-up selfie in a cozy modern cafe, soft afternoon window light"
     pose_options = [
@@ -179,12 +179,36 @@ async def generate_selfie(request: SelfieRequest):
         "three-quarter body framing, natural perspective",
         "close portrait framing, soft background depth"
     ]
-    chosen_pose = random.SystemRandom().choice(pose_options)
-    chosen_camera = random.SystemRandom().choice(camera_options)
+    rng = random.SystemRandom()
+    chosen_pose = rng.choice(pose_options)
+    chosen_camera = rng.choice(camera_options)
+    chosen_outfit = rng.choice([
+        "pastel pink cardigan with jeans", "cute white blouse with a modest skirt",
+        "lavender casual dress with a modest neckline", "oversized sweater and fitted jeans",
+        "smart casual jacket with a simple top", "floral summer dress, tasteful and fully covered",
+        "cozy hoodie and casual trousers", "elegant fully covered evening dress"
+    ])
+    chosen_expression = rng.choice([
+        "bright cheerful smile", "soft shy smile", "playful wink",
+        "gentle laugh looking slightly away", "confident relaxed expression",
+        "curious wide-eyed expression", "warm friendly smile", "subtle cute pout"
+    ])
+    chosen_background = rng.choice([
+        "sunlit cafe", "cozy room with tasteful decor", "city street at golden hour",
+        "green garden with soft bokeh", "modern apartment by a large window", "bookstore aisle",
+        "beach promenade at sunset", "art studio", "rooftop lounge at dusk",
+        "minimal pastel photo studio"
+    ])
+    chosen_lighting = rng.choice([
+        "soft morning window light", "warm golden-hour sunlight",
+        "soft diffused studio lighting", "moody cinematic evening light",
+        "bright natural daylight"
+    ])
     prompt = (
         f"photorealistic portrait of {character_identity[character]}, "
-        f"{scene}, {chosen_pose}, {chosen_camera}, fully clothed, tasteful modern casual fashion, "
-        "consistent facial features, natural skin texture, soft cinematic lighting, "
+        f"{scene}, {chosen_pose}, {chosen_camera}, wearing {chosen_outfit}, {chosen_expression}, "
+        f"background: {chosen_background}, {chosen_lighting}, fully clothed, tasteful fashion, "
+        "consistent facial features, natural skin texture, "
         "sharp detailed eyes, high quality portrait photography"
     )
     negative = (
