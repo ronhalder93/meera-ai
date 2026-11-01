@@ -25,6 +25,41 @@ function saveHistory(name) {
   try { localStorage.setItem(storageKey(name), JSON.stringify(chatHistory[name].slice(-30))); }
   catch (_) { /* Local storage may be unavailable or full. */ }
 }
+const imageViewer = document.createElement('div');
+imageViewer.className = 'image-viewer';
+imageViewer.setAttribute('aria-hidden', 'true');
+imageViewer.innerHTML = `
+  <div class="image-viewer-toolbar">
+    <button class="viewer-action viewer-download" type="button" aria-label="Download image" title="Download">⬇️</button>
+    <button class="viewer-action viewer-close" type="button" aria-label="Close image" title="Close">✕</button>
+  </div>
+  <img class="image-viewer-image" alt="Full-size AI portrait">
+`;
+document.body.appendChild(imageViewer);
+const viewerImage = imageViewer.querySelector('.image-viewer-image');
+imageViewer.querySelector('.viewer-close').addEventListener('click', closeImageViewer);
+imageViewer.addEventListener('click', event => { if (event.target === imageViewer) closeImageViewer(); });
+imageViewer.querySelector('.viewer-download').addEventListener('click', () => {
+  if (!viewerImage.src) return;
+  const link = document.createElement('a');
+  link.href = viewerImage.src;
+  link.download = (activeCharacter || 'meera').toLowerCase() + '-selfie-' + Date.now() + '.png';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+});
+function openImageViewer(src, alt) {
+  viewerImage.src = src;
+  viewerImage.alt = alt || 'Full-size AI portrait';
+  imageViewer.classList.add('open');
+  imageViewer.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+function closeImageViewer() {
+  imageViewer.classList.remove('open');
+  imageViewer.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
 function addMessage(text, kind, stamp) {
   const node = document.createElement('div');
   node.className = 'message ' + kind;
@@ -72,7 +107,7 @@ document.querySelectorAll('.companion-link').forEach(link => link.addEventListen
 }));
 document.getElementById('closeChat').addEventListener('click', closeChat);
 overlay.addEventListener('click', e => { if (e.target === overlay) closeChat(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeChat(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeImageViewer(); closeChat(); } });
 document.querySelectorAll('.heart').forEach(btn => btn.addEventListener('click', e => {
   e.stopPropagation();
   btn.classList.toggle('liked');
@@ -95,7 +130,8 @@ document.querySelector('.composer-plus').addEventListener('click', async () => {
     const image = document.createElement('img');
     image.src = data.image;
     image.alt = activeCharacter + ' portrait';
-    image.style.cssText = 'display:block;max-width:100%;width:280px;border-radius:14px;';
+    image.style.cssText = 'display:block;max-width:100%;width:280px;border-radius:14px;cursor:zoom-in;';
+    image.addEventListener('click', () => openImageViewer(image.src, image.alt));
     pending.appendChild(image);
     const caption = document.createElement('small');
     caption.textContent = 'AI-generated portrait';
