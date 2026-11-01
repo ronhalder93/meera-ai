@@ -144,11 +144,12 @@ class SelfieRequest(BaseModel):
 async def generate_selfie(request: SelfieRequest):
     """Generate a non-explicit fictional-adult portrait through an authenticated ComfyUI bridge."""
     bridge_url = os.getenv("COMFY_URL", "").rstrip("/")
-    bridge_token = os.getenv("COMFY_API_TOKEN", "")
-    if not bridge_url or not bridge_token:
+    bridge_user = os.getenv("COMFY_AUTH_USER", "")
+    bridge_password = os.getenv("COMFY_AUTH_PASSWORD", "")
+    if not bridge_url or not bridge_user or not bridge_password:
         raise HTTPException(
             status_code=503,
-            detail="Image generation is not connected yet. Configure COMFY_URL and COMFY_API_TOKEN in Render.",
+            detail="Image generation is not connected yet. Configure COMFY_URL, COMFY_AUTH_USER, and COMFY_AUTH_PASSWORD in Render.",
         )
 
     character = request.character if request.character in CHARACTERS else "Meera"
@@ -180,10 +181,10 @@ async def generate_selfie(request: SelfieRequest):
     workflow["5"]["inputs"].pop(" denoise", None)
     workflow["5"]["inputs"]["denoise"] = 1.0
 
-    headers = {"Authorization": f"Bearer {bridge_token}"}
-    async with httpx.AsyncClient(timeout=180.0) as client:
+    auth = httpx.BasicAuth(bridge_user, bridge_password)
+    async with httpx.AsyncClient(timeout=180.0, auth=auth) as client:
         try:
-            queued = await client.post(f"{bridge_url}/prompt", json={"prompt": workflow}, headers=headers)
+            queued = await client.post(f"{bridge_url}/prompt", json={"prompt": workflow})
             queued.raise_for_status()
             prompt_id = queued.json()["prompt_id"]
 
@@ -214,7 +215,6 @@ async def generate_selfie(request: SelfieRequest):
                     "subfolder": image_info.get("subfolder", ""),
                     "type": image_info.get("type", "output"),
                 },
-                headers=headers,
             )
             image_response.raise_for_status()
             import base64
