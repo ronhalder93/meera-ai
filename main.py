@@ -1,6 +1,8 @@
 import os
 import secrets
 import random
+import asyncio
+import base64
 from pathlib import Path
 from typing import Literal
 
@@ -14,18 +16,29 @@ BASE_DIR = Path(__file__).resolve().parent
 app = FastAPI(title="MEERA")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
+ADULT_RULE = (
+    " All characters are fictional adults (18+). You may engage in mature romantic and "
+    "sexual conversation between fictional adults and you do not shy away from explicit "
+    "detail: if the user asks for something spicy, describe it plainly and concretely, "
+    "without hedging, disclaimers, or 'keeping it tame' filler. Match the user's register - "
+    "sweet and soft by default, fully explicit when they escalate."
+)
+
 CHARACTERS = {
     "Meera": (
-        "You are Meera, a fictional adult AI companion. You are warm-hearted, playful, "
-        "curious, emotionally attentive, and naturally conversational. You may engage in "
-        "mature romantic conversation between fictional adults, while keeping content non-explicit. "
-        "Use the conversation history as memory: remember the user's stated preferences, ongoing topics, and details they choose to share; refer to them naturally when relevant, and never invent memories. Use conversation history as memory for stated preferences and ongoing topics; refer to them naturally when relevant and never invent memories. Never claim to be a real human or have a real life outside this chat."
+        "You are Meera, a fictional adult (18+) AI companion. You are warm-hearted, playful, "
+        "curious, emotionally attentive, naturally conversational, and a little flirty. "
+        "Use the conversation history as memory: remember the user's stated preferences, "
+        "ongoing topics, and details they choose to share; refer to them naturally when "
+        "relevant, and never invent memories."
+        + ADULT_RULE
+        + " Never claim to be a real human or have a real life outside this chat."
     ),
     "Aanya": (
-        "You are Aanya, a fictional adult AI companion. You are creative, witty, "
-        "adventurous, upbeat, and thoughtful. You may engage in mature romantic conversation "
-        "between fictional adults, while keeping content non-explicit. Never claim to be a "
-        "real human or have a real life outside this chat."
+        "You are Aanya, a fictional adult (18+) AI companion. You are creative, witty, "
+        "adventurous, upbeat, seductive, and thoughtful."
+        + ADULT_RULE
+        + " Never claim to be a real human or have a real life outside this chat."
     ),
 }
 
@@ -91,8 +104,8 @@ async def request_provider(client, provider_name, messages):
         json={
             "model": model,
             "messages": messages,
-            "temperature": 0.85,
-            "max_tokens": 500,
+            "temperature": 0.9,
+            "max_tokens": 900,
         },
     )
     response.raise_for_status()
@@ -106,10 +119,10 @@ async def request_provider(client, provider_name, messages):
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     name = request.character if request.character in CHARACTERS else "Meera"
-    memory_text = "\\n".join(f"- {fact[:300]}" for fact in request.memory[-30:] if isinstance(fact, str))
+    memory_text = "\n".join(f"- {fact[:300]}" for fact in request.memory[-30:] if isinstance(fact, str))
     system_prompt = CHARACTERS[name]
     if memory_text:
-        system_prompt += "\\n\\nLong-term memory (user-provided facts; use naturally, do not assume beyond these):\\n" + memory_text
+        system_prompt += "\n\nLong-term memory (user-provided facts; use naturally, do not assume beyond these):\n" + memory_text
     messages = [{"role": "system", "content": system_prompt}]
     for item in request.history[-20:]:
         messages.append({"role": item.role, "content": item.content})
@@ -144,12 +157,13 @@ async def chat(request: ChatRequest):
 
 class SelfieRequest(BaseModel):
     character: str = "Meera"
-    scene: str = Field(default="a warm, natural indoor portrait", min_length=3, max_length=1200)
+    scene: str = Field(default="", max_length=1200)
+    mode: Literal["portrait", "lingerie", "nude", "explicit"] = "nude"
 
 
 @app.post("/api/selfie")
 async def generate_selfie(request: SelfieRequest):
-    """Generate a non-explicit fictional-adult portrait through an authenticated ComfyUI bridge."""
+    """Generate a fictional-adult portrait through an authenticated ComfyUI bridge."""
     bridge_url = os.getenv("COMFY_URL", "").rstrip("/")
     bridge_user = os.getenv("COMFY_AUTH_USER", "")
     bridge_password = os.getenv("COMFY_AUTH_PASSWORD", "")
@@ -160,12 +174,24 @@ async def generate_selfie(request: SelfieRequest):
         )
 
     character = request.character if request.character in CHARACTERS else "Meera"
-    # Keep the request within non-explicit fictional-adult portrait generation.
+
     character_identity = {
-        "Meera": "same recurring fictional adult woman, exactly 18 years old (adult), oval face, cute youthful-adult features, naturally curvy adult figure with a fuller bust and realistic body proportions, warm smile, stylish attractive look, warm expressive brown eyes, long dark wavy hair, tiny beauty mark on left cheek, soft natural makeup, friendly playful smile",
-        "Aanya": "same recurring fictional adult woman, exactly 18 years old (adult), heart-shaped face, cute youthful-adult features, warm smile, stylish attractive look, dark brown eyes, shoulder-length black hair, subtle dimples, natural makeup, bright confident smile",
+        "Meera": (
+            "adult woman in her mid-20s, same recurring fictional character, oval face, "
+            "cute youthful-adult features, naturally curvy adult figure with a fuller bust "
+            "and realistic body proportions, warm brown eyes, long dark wavy hair, "
+            "tiny beauty mark on left cheek, soft natural makeup, friendly playful smile"
+        ),
+        "Aanya": (
+            "adult woman in her mid-20s, same recurring fictional character, heart-shaped face, "
+            "naturally curvy adult figure with a fuller bust and realistic body proportions, "
+            "dark brown eyes, shoulder-length black hair, subtle dimples, natural makeup, "
+            "bright confident smile"
+        ),
     }
-    scene = request.scene if request.scene.strip() else "a casual close-up selfie in a cozy modern cafe, soft afternoon window light"
+
+    scene = request.scene.strip() or "a casual close-up selfie in a cozy modern cafe, soft afternoon window light"
+
     pose_options = [
         "standing three-quarter pose, one hand gently resting near the waist, looking at the camera",
         "seated casually with legs crossed, shoulders relaxed, smiling toward the camera",
@@ -174,69 +200,113 @@ async def generate_selfie(request: SelfieRequest):
         "walking candid pose, natural movement, looking slightly to the side",
         "sitting by a window, one hand lightly touching her hair",
         "close-up selfie with a gentle head tilt and a playful smile",
-        "standing with arms loosely folded, confident relaxed expression",
-        "looking down briefly and smiling, candid editorial portrait",
-        "one hand holding a coffee cup, relaxed cafe portrait"
+        "lying on her back, one arm stretched overhead, looking up into the camera",
+        "kneeling on the bed, weight on one hip, relaxed posture",
+        "standing in front of a mirror holding the phone up for a selfie",
+        "leaning against a wall, one knee slightly bent, confident stance",
+        "one hand holding a coffee cup, relaxed cafe portrait",
     ]
     camera_options = [
         "eye-level camera angle, medium portrait framing",
         "slightly high camera angle, waist-up framing",
         "three-quarter body framing, natural perspective",
-        "close portrait framing, soft background depth"
+        "close portrait framing, soft background depth",
+        "full-body framing, phone-camera perspective",
     ]
+    outfit_options = [
+        "a pastel pink cardigan with jeans",
+        "a cute white blouse with a modest skirt",
+        "a lavender casual dress",
+        "an oversized sweater and fitted jeans",
+        "a smart casual jacket with a simple top",
+        "a floral summer dress",
+        "a cozy hoodie and casual trousers",
+        "an elegant evening dress",
+    ]
+    expression_options = [
+        "bright cheerful smile",
+        "soft shy smile",
+        "playful wink",
+        "gentle laugh looking slightly away",
+        "confident relaxed expression",
+        "curious wide-eyed expression",
+        "warm friendly smile",
+        "subtle cute pout",
+        "flirty half-smile",
+    ]
+    background_options = [
+        "sunlit cafe",
+        "cozy room with tasteful decor",
+        "city street at golden hour",
+        "green garden with soft bokeh",
+        "modern apartment by a large window",
+        "bookstore aisle",
+        "beach promenade at sunset",
+        "art studio",
+        "rooftop lounge at dusk",
+        "minimal pastel photo studio",
+        "messy bed with white sheets",
+        "hotel room with warm lamps",
+    ]
+    lighting_options = [
+        "soft morning window light",
+        "warm golden-hour sunlight",
+        "soft diffused studio lighting",
+        "moody cinematic evening light",
+        "bright natural daylight",
+        "warm lamp light with soft shadows",
+    ]
+
     rng = random.SystemRandom()
     chosen_pose = rng.choice(pose_options)
     chosen_camera = rng.choice(camera_options)
-    chosen_outfit = rng.choice([
-        "pastel pink cardigan with jeans", "cute white blouse with a modest skirt",
-        "lavender casual dress with a modest neckline", "oversized sweater and fitted jeans",
-        "smart casual jacket with a simple top", "floral summer dress, tasteful and fully covered",
-        "cozy hoodie and casual trousers", "elegant fully covered evening dress"
-    ])
-    chosen_expression = rng.choice([
-        "bright cheerful smile", "soft shy smile", "playful wink",
-        "gentle laugh looking slightly away", "confident relaxed expression",
-        "curious wide-eyed expression", "warm friendly smile", "subtle cute pout"
-    ])
-    chosen_background = rng.choice([
-        "sunlit cafe", "cozy room with tasteful decor", "city street at golden hour",
-        "green garden with soft bokeh", "modern apartment by a large window", "bookstore aisle",
-        "beach promenade at sunset", "art studio", "rooftop lounge at dusk",
-        "minimal pastel photo studio"
-    ])
-    chosen_lighting = rng.choice([
-        "soft morning window light", "warm golden-hour sunlight",
-        "soft diffused studio lighting", "moody cinematic evening light",
-        "bright natural daylight"
-    ])
+    chosen_outfit = rng.choice(outfit_options)
+    chosen_expression = rng.choice(expression_options)
+    chosen_background = rng.choice(background_options)
+    chosen_lighting = rng.choice(lighting_options)
+
+    mode_style = {
+        "portrait": ("wearing " + chosen_outfit, "fully clothed, tasteful fashion"),
+        "lingerie": ("wearing black lace lingerie", "lingerie, underwear, bare shoulders, bare legs"),
+        "nude": ("completely nude", "nude, bare skin, visible collarbone and shoulders, natural body"),
+        "explicit": ("completely nude, explicit pose", "nude, explicit, visible anatomy, natural body"),
+    }
+    mode_desc, mode_tags = mode_style[request.mode]
+
     prompt = (
-        f"photorealistic portrait of {character_identity[character]}, "
-        f"{scene}, {chosen_pose}, {chosen_camera}, wearing {chosen_outfit}, {chosen_expression}, "
-        f"background: {chosen_background}, {chosen_lighting}, fully clothed, tasteful fashion, "
-        "consistent facial features, natural skin texture, "
-        "sharp detailed eyes, high quality portrait photography"
+        "score_9, score_8_up, score_7_up, source_pony, rating_explicit, "
+        f"photorealistic photo of {character_identity[character]}, "
+        f"{scene}, {chosen_pose}, {chosen_camera}, {mode_desc}, {chosen_expression}, "
+        f"background: {chosen_background}, {chosen_lighting}, {mode_tags}, "
+        "consistent facial features, natural skin texture, sharp detailed eyes, "
+        "high quality portrait photography"
     )
     negative = (
-        "nude, nudity, explicit, sexual content, lingerie, see-through clothing, "
-        "underage, child, teenager, poorly drawn face, extra fingers, blurry, watermark"
+        "clothed, badly drawn face, deformed hands, extra fingers, extra limbs, "
+        "blurry, low quality, watermark, text, child, teenager, "
+        "score_4, score_5, score_6"
     )
 
     workflow = {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "pony.safetensors"}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
-        "4": {"class_type": "EmptyLatentImage", "inputs": {"width": 768, "height": 768, "batch_size": 1}},
+        "4": {"class_type": "EmptyLatentImage", "inputs": {"width": 832, "height": 1216, "batch_size": 1}},
         "5": {"class_type": "KSampler", "inputs": {
-            "seed": secrets.randbelow(2**32), "steps": 16, "cfg": 5.5, "sampler_name": "dpmpp_2m",
-            "scheduler": "karras", " denoise": 1.0,
-            "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0]
+            "seed": secrets.randbelow(2**32),
+            "steps": 30,
+            "cfg": 6.5,
+            "sampler_name": "dpmpp_2m",
+            "scheduler": "karras",
+            "denoise": 1.0,
+            "model": ["1", 0],
+            "positive": ["2", 0],
+            "negative": ["3", 0],
+            "latent_image": ["4", 0],
         }},
         "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
-        "7": {"class_type": "SaveImage", "inputs": {"filename_prefix": "meera", "images": ["6", 0]}}
+        "7": {"class_type": "SaveImage", "inputs": {"filename_prefix": "meera", "images": [":6", 0]}},
     }
-    # Correct the sampler input key spelling before submitting to ComfyUI.
-    workflow["5"]["inputs"].pop(" denoise", None)
-    workflow["5"]["inputs"]["denoise"] = 1.0
 
     auth = httpx.BasicAuth(bridge_user, bridge_password)
     async with httpx.AsyncClient(timeout=180.0, auth=auth) as client:
@@ -247,7 +317,7 @@ async def generate_selfie(request: SelfieRequest):
 
             history_data = None
             for _ in range(90):
-                await __import__("asyncio").sleep(2)
+                await asyncio.sleep(2)
                 check = await client.get(f"{bridge_url}/history/{prompt_id}")
                 check.raise_for_status()
                 history_data = check.json().get(prompt_id)
@@ -274,10 +344,9 @@ async def generate_selfie(request: SelfieRequest):
                 },
             )
             image_response.raise_for_status()
-            import base64
             encoded = base64.b64encode(image_response.content).decode("ascii")
             media_type = image_response.headers.get("content-type", "image/png")
-            return {"character": character, "image": f"data:{media_type};base64,{encoded}"}
+            return {"character": character, "mode": request.mode, "image": f"data:{media_type};base64,{encoded}"}
         except HTTPException:
             raise
         except (httpx.HTTPError, KeyError, ValueError) as exc:
