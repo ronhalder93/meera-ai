@@ -158,7 +158,7 @@ async def chat(request: ChatRequest):
 class SelfieRequest(BaseModel):
     character: str = "Meera"
     scene: str = Field(default="", max_length=1200)
-    mode: Literal["portrait", "lingerie", "nude", "explicit"] = "nude"
+    mode: Literal["portrait"] = "portrait"
 
 
 @app.post("/api/selfie")
@@ -265,30 +265,25 @@ async def generate_selfie(request: SelfieRequest):
     chosen_background = rng.choice(background_options)
     chosen_lighting = rng.choice(lighting_options)
 
-    mode_style = {
-        "portrait": ("wearing " + chosen_outfit, "fully clothed, tasteful fashion"),
-        "lingerie": ("wearing black lace lingerie", "lingerie, underwear, bare shoulders, bare legs"),
-        "nude": ("completely nude", "nude, bare skin, visible collarbone and shoulders, natural body"),
-        "explicit": ("completely nude, explicit pose", "nude, explicit, visible anatomy, natural body"),
-    }
-    mode_desc, mode_tags = mode_style[request.mode]
+    mode_desc = "wearing " + chosen_outfit
 
     prompt = (
-        "score_9, score_8_up, score_7_up, source_pony, rating_explicit, "
-        f"photorealistic photo of {character_identity[character]}, "
-        f"{scene}, {chosen_pose}, {chosen_camera}, {mode_desc}, {chosen_expression}, "
-        f"background: {chosen_background}, {chosen_lighting}, {mode_tags}, "
-        "consistent facial features, natural skin texture, sharp detailed eyes, "
-        "high quality portrait photography"
+        "Photorealistic, high-quality fashion portrait photograph of "
+        f"{character_identity[character]}. "
+        f"Scene: {scene}. Pose: {chosen_pose}. Camera: {chosen_camera}. "
+        f"Outfit: {mode_desc}. Expression: {chosen_expression}. "
+        f"Background: {chosen_background}. Lighting: {chosen_lighting}. "
+        "The adult woman is fully clothed in tasteful everyday fashion; "
+        "natural skin texture, realistic anatomy, detailed eyes, consistent facial identity."
     )
     negative = (
-        "clothed, badly drawn face, deformed hands, extra fingers, extra limbs, "
-        "blurry, low quality, watermark, text, child, teenager, "
-        "score_4, score_5, score_6"
+        "nudity, nude, naked, lingerie, underwear, exposed breasts, explicit sexual content, "
+        "badly drawn face, deformed hands, extra fingers, extra limbs, blurry, low quality, "
+        "watermark, text, child, teenager"
     )
 
     workflow = {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "pony.safetensors"}},
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "sd_xl_base_1.0.safetensors"}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "EmptyLatentImage", "inputs": {"width": 832, "height": 1216, "batch_size": 1}},
