@@ -39,6 +39,7 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=1000)
     character: str = "Meera"
     history: list[ChatMessage] = Field(default_factory=list, max_length=30)
+    memory: list[str] = Field(default_factory=list, max_length=30)
 
 
 PROVIDERS = {
@@ -105,7 +106,11 @@ async def request_provider(client, provider_name, messages):
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     name = request.character if request.character in CHARACTERS else "Meera"
-    messages = [{"role": "system", "content": CHARACTERS[name]}]
+    memory_text = "\\n".join(f"- {fact[:300]}" for fact in request.memory[-30:] if isinstance(fact, str))
+    system_prompt = CHARACTERS[name]
+    if memory_text:
+        system_prompt += "\\n\\nLong-term memory (user-provided facts; use naturally, do not assume beyond these):\\n" + memory_text
+    messages = [{"role": "system", "content": system_prompt}]
     for item in request.history[-20:]:
         messages.append({"role": item.role, "content": item.content})
     messages.append({"role": "user", "content": request.message})
