@@ -1,7 +1,8 @@
 const overlay = document.getElementById('chatOverlay');
 const messages = document.getElementById('messages');
 let activeCharacter = 'Meera';
-const chatHistory = { Meera: [], Aanya: [] };\n
+const chatHistory = { Meera: [], Aanya: [] };
+
 const GALLERY_DB = 'meera-private-gallery';
 const GALLERY_STORE = 'images';
 function openGalleryDB() {
@@ -204,7 +205,8 @@ document.querySelector('.composer-plus').addEventListener('click', async () => {
     pending.appendChild(image);
     const caption = document.createElement('small');
     caption.textContent = 'AI-generated portrait';
-    pending.appendChild(caption);\n    try { await saveGalleryImage({ id: Date.now() + '-' + Math.random().toString(16).slice(2), character: activeCharacter, image: data.image, createdAt: Date.now() }); } catch (_) { /* Chat image remains available even if gallery storage is full. */ }
+    pending.appendChild(caption);
+    try { await saveGalleryImage({ id: Date.now() + '-' + Math.random().toString(16).slice(2), character: activeCharacter, image: data.image, createdAt: Date.now() }); } catch (_) { /* Chat image remains available even if gallery storage is full. */ }
   } catch (error) {
     pending.textContent = error.message || 'Image generation is not available yet.';
   } finally {
