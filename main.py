@@ -305,7 +305,7 @@ async def generate_selfie(request: SelfieRequest):
             "latent_image": ["4", 0],
         }},
         "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
-        "7": {"class_type": "SaveImage", "inputs": {"filename_prefix": "meera", "images": [":6", 0]}},
+        "7": {"class_type": "SaveImage", "inputs": {"filename_prefix": "meera", "images": ["6", 0]}},
     }
 
     auth = httpx.BasicAuth(bridge_user, bridge_password)
