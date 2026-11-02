@@ -18,9 +18,11 @@ app = FastAPI(title="MEERA")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 ADULT_RULE = (
-    " All characters are fictional adults (18+). Keep romance warm and mature but "
-    "non-explicit. Do not produce graphic sexual content, sexual nudity, or sexualized "
-    "image prompts. If asked, politely redirect to non-explicit affection or romance."
+    " All characters are fictional adults (18+). You may engage in mature romantic and "
+    "sexual conversation between fictional adults and you do not shy away from explicit "
+    "detail: if the user asks for something spicy, describe it plainly and concretely, "
+    "without hedging, disclaimers, or 'keeping it tame' filler. Match the user's register - "
+    "sweet and soft by default, fully explicit when they escalate."
 )
 
 CHARACTERS = {
@@ -90,7 +92,7 @@ async def health():
             "ckpt": os.getenv("COMFY_CKPT", "sd_xl_base_1.0.safetensors"),
             "ref": os.getenv("COMFY_REF_IMAGE", "meera-reference.png"),
             "ipadapter": os.getenv("COMFY_USE_IPADAPTER", "1") != "0",
-            "default_mode": "portrait",
+            "default_mode": "nude",
         },
         "providers": {
             name: {
@@ -169,7 +171,7 @@ async def chat(request: ChatRequest):
 class SelfieRequest(BaseModel):
     character: str = "Meera"
     scene: str = Field(default="", max_length=1200)
-    mode: Literal["portrait"] = "portrait"
+    mode: Literal["portrait", "lingerie", "nude", "explicit"] = "nude"
 
 
 @app.post("/api/selfie")
@@ -286,11 +288,32 @@ async def generate_selfie(request: SelfieRequest):
     chosen_background = rng.choice(background_options)
     chosen_lighting = rng.choice(lighting_options)
 
-    mode_desc = f"Outfit: wearing {chosen_outfit}. She is fully clothed in tasteful everyday fashion."
-    mode_negative = "nude, naked, lingerie, exposed breasts, bare midriff, sexualized pose"
+    mode_style = {
+        "portrait": (
+            f"Outfit: wearing {chosen_outfit}. She is fully clothed in tasteful everyday fashion.",
+            "nude, naked, lingerie, exposed breasts, bare midriff",
+        ),
+        "lingerie": (
+            "Outfit: black lace lingerie, matching bra and panties. Bare shoulders, bare midriff, bare legs, bare feet.",
+            "jeans, sweater, jacket, fully dressed, thick clothing",
+        ),
+        "nude": (
+            "She is completely nude, fully undressed, no clothing at all. Bare skin, bare shoulders, "
+            "bare collarbone, bare breasts, bare hips, natural body.",
+            "clothed, dressed, clothes, shirt, t-shirt, pants, jeans, dress, bra, panties, "
+            "swimsuit, towel, blanket covering body, sheet covering body",
+        ),
+        "explicit": (
+            "She is completely nude, fully naked, no clothing at all, explicit pose. Bare skin, "
+            "bare breasts, bare hips, visible anatomy, natural body.",
+            "clothed, dressed, clothes, shirt, t-shirt, pants, jeans, dress, bra, panties, "
+            "swimsuit, towel, blanket covering body, sheet covering body, censored, mosaic",
+        ),
+    }
+    mode_desc, mode_negative = mode_style[request.mode]
 
     prompt = (
-        "photorealistic, fully clothed, non-sexual, high-quality candid selfie photograph of "
+        "nude, photorealistic, high-quality candid selfie photograph of "
         f"{character_identity[character]}. "
         f"{mode_desc} "
         f"Scene: {scene}. Pose: {chosen_pose}. Camera: {chosen_camera}. "
@@ -392,17 +415,8 @@ async def generate_selfie(request: SelfieRequest):
             }
         except HTTPException:
             raise
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code if exc.response is not None else "unknown"
-            body = (exc.response.text[:500] if exc.response is not None else "")
-            print(f"ComfyUI bridge returned HTTP {status}: {body}")
-            raise HTTPException(
-                status_code=502,
-                detail=f"ComfyUI bridge returned HTTP {status}. Check Render logs and the Colab ComfyUI console.",
-            ) from exc
         except (httpx.HTTPError, KeyError, ValueError) as exc:
-            print(f"ComfyUI bridge error: {type(exc).__name__}: {str(exc)[:500]}")
             raise HTTPException(
                 status_code=502,
-                detail="The authenticated image bridge could not complete the request. Check the Colab tunnel and ComfyUI logs.",
+                detail="The authenticated image bridge could not complete the request. Check the Kaggle bridge and ComfyUI logs.",
             ) from exc
