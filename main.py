@@ -420,3 +420,13 @@ async def generate_selfie(request: SelfieRequest):
                 status_code=502,
                 detail="The authenticated image bridge could not complete the request. Check the Kaggle bridge and ComfyUI logs.",
             ) from exc
+
+
+@app.get("/api/avatar-config")
+async def avatar_config():
+    """Return optional hosted avatar video URLs configured in the Render environment."""
+    return {
+        "idle_video_url": os.getenv("MEERA_IDLE_VIDEO_URL", ""),
+        "speaking_video_url": os.getenv("MEERA_SPEAKING_VIDEO_URL", ""),
+        "configured": bool(os.getenv("MEERA_IDLE_VIDEO_URL")),
+    }
