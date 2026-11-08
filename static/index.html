@@ -49,6 +49,13 @@
   <div class="chat-overlay" id="chatOverlay" aria-hidden="true">
     <section class="chat-panel">
       <header class="chat-header"><button class="back-button" id="closeChat">←</button><div class="chat-person-avatar" id="chatAvatar">M</div><div class="chat-person"><strong id="chatName">Meera</strong><small><i></i> Online now</small></div><button class="icon-button chat-menu" aria-label="More options">···</button></header>
+      <section class="meera-avatar-stage" id="meeraAvatarStage" aria-label="Meera live avatar">
+        <div class="avatar-video-wrap">
+          <video id="meeraAvatarVideo" class="meera-avatar-video" autoplay muted loop playsinline preload="metadata"></video>
+          <div class="avatar-video-placeholder" id="avatarVideoPlaceholder"><span class="avatar-placeholder-mark">M</span><strong>Meera</strong><small>Connect an idle video to bring Meera on screen</small></div>
+          <span class="avatar-live-pill"><i></i><span id="avatarState">READY</span></span>
+        </div>
+      </section>
       <div class="chat-intro"><div class="chat-large-avatar" id="chatLargeAvatar">M</div><h2 id="chatWelcome">A little hello from Meera</h2><p>Your conversation starts here. Be yourself.</p><span class="date-chip">TODAY</span></div>
       <div class="messages" id="messages"><div class="message received">Hey! I'm glad you're here. How's your day going?<small>Just now</small></div></div>
       <form class="composer" id="chatForm"><button type="button" class="composer-plus" title="Attachments coming soon">＋</button><input id="messageInput" autocomplete="off" placeholder="Write something..." maxlength="1000" aria-label="Your message"><button class="send-button" type="submit" aria-label="Send message">↑</button></form>
