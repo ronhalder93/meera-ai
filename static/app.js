@@ -267,6 +267,7 @@ document.getElementById('chatForm').addEventListener('submit', async e => {
     const data = await response.json();
     if (!response.ok) throw new Error(errorMessage(data.detail, 'MEERA could not reply right now.'));
     pending.textContent = data.reply || 'I’m here. Tell me a little more.';
+    playMeeraSpeakingVideo();
     chatHistory[activeCharacter].push({ role: 'assistant', content: pending.textContent });
     saveHistory(activeCharacter);
   } catch (error) {
@@ -281,3 +282,54 @@ document.getElementById('chatForm').addEventListener('submit', async e => {
     messages.scrollTop = messages.scrollHeight;
   }
 });
+
+
+// Persistent avatar video player. Configure MEERA_IDLE_VIDEO_URL and
+// MEERA_SPEAKING_VIDEO_URL in the hosting environment with your own video files.
+const meeraAvatarVideo = document.getElementById('meeraAvatarVideo');
+const avatarVideoPlaceholder = document.getElementById('avatarVideoPlaceholder');
+const avatarState = document.getElementById('avatarState');
+let meeraAvatarConfig = { idle_video_url: '', speaking_video_url: '' };
+function setMeeraAvatarVideo(mode) {
+  if (!meeraAvatarVideo) return;
+  const source = mode === 'speaking'
+    ? (meeraAvatarConfig.speaking_video_url || meeraAvatarConfig.idle_video_url)
+    : meeraAvatarConfig.idle_video_url;
+  if (!source) {
+    avatarVideoPlaceholder?.classList.remove('is-hidden');
+    if (avatarState) avatarState.textContent = 'VIDEO NOT CONNECTED';
+    return;
+  }
+  avatarVideoPlaceholder?.classList.add('is-hidden');
+  const nextLoop = mode !== 'speaking' || !meeraAvatarConfig.speaking_video_url;
+  if (meeraAvatarVideo.dataset.currentSource !== source) {
+    meeraAvatarVideo.src = source;
+    meeraAvatarVideo.dataset.currentSource = source;
+    meeraAvatarVideo.load();
+  }
+  meeraAvatarVideo.loop = nextLoop;
+  meeraAvatarVideo.muted = mode !== 'speaking';
+  if (avatarState) avatarState.textContent = mode === 'speaking' ? 'SPEAKING' : 'LIVE';
+  if (mode === 'speaking' && meeraAvatarConfig.speaking_video_url) {
+    meeraAvatarVideo.currentTime = 0;
+    meeraAvatarVideo.onended = () => setMeeraAvatarVideo('idle');
+  } else {
+    meeraAvatarVideo.onended = null;
+  }
+  meeraAvatarVideo.play().catch(() => {
+    if (avatarState) avatarState.textContent = 'TAP TO PLAY';
+  });
+}
+function playMeeraSpeakingVideo() { setMeeraAvatarVideo('speaking'); }
+async function initialiseMeeraAvatar() {
+  try {
+    const response = await fetch('/api/avatar-config');
+    if (!response.ok) return;
+    meeraAvatarConfig = await response.json();
+    setMeeraAvatarVideo('idle');
+  } catch (_) {
+    if (avatarState) avatarState.textContent = 'VIDEO NOT CONNECTED';
+  }
+}
+meeraAvatarVideo?.addEventListener('click', () => meeraAvatarVideo.play().catch(() => {}));
+initialiseMeeraAvatar();
