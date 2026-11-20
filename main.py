@@ -57,6 +57,14 @@ class ChatRequest(BaseModel):
 
 
 PROVIDERS = {
+    # Self-hosted GLM or another OpenAI-compatible endpoint.
+    # Keep the API key and endpoint in server environment variables, never in frontend code.
+    "glm": {
+        "key_env": "GLM_API_KEY",
+        "base_url_env": "GLM_BASE_URL",
+        "model_env": "GLM_MODEL",
+        "default_model": "zandenAI/GLM-5.2-FP8-Uncensored",
+    },
     "openrouter": {
         "key_env": "OPENROUTER_API_KEY",
         "base_url": "https://openrouter.ai/api/v1/chat/completions",
@@ -111,8 +119,11 @@ async def request_provider(client, provider_name, messages):
         raise RuntimeError(f"{provider_name} key is not configured")
 
     model = os.getenv(config["model_env"], config["default_model"])
+    base_url = config.get("base_url") or os.getenv(config.get("base_url_env", ""), "")
+    if not base_url:
+        raise RuntimeError(f"{provider_name} base URL is not configured")
     response = await client.post(
-        config["base_url"],
+        base_url.rstrip("/") + ("" if base_url.rstrip("/").endswith("/chat/completions") else "/chat/completions"),
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
         json={
             "model": model,
@@ -143,7 +154,7 @@ async def chat(request: ChatRequest):
 
     # OpenRouter is primary. MegaNova is attempted automatically if OpenRouter
     # is unavailable, rejects the request, or has no configured key.
-    provider_order = ["openrouter", "meganova"]
+    provider_order = ["glm", "openrouter", "meganova"]
     errors = []
     async with httpx.AsyncClient(timeout=60.0) as client:
         for provider_name in provider_order:
