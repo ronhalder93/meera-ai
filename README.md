@@ -34,3 +34,14 @@ No paid API key is required for this demo. The chat endpoint currently returns a
 
 ## Safety and privacy
 Do not put API keys in frontend files or commit them to Git. Use Render environment variables for secrets. Do not expose an unauthenticated ComfyUI instance to the public internet. Character portraits and experiences should depict fictional adults (18+) and remain non-explicit.
+
+
+## Self-hosted GLM configuration
+
+Set these environment variables on the hosting service:
+
+- `GLM_API_KEY`: bearer token accepted by your inference server.
+- `GLM_BASE_URL`: OpenAI-compatible API base URL (for example, a server's `/v1` base, or its full `/v1/chat/completions` endpoint).
+- `GLM_MODEL`: model name exposed by that server. Defaults to `zandenAI/GLM-5.2-FP8-Uncensored`; override it if your server uses a different served-model alias.
+
+The model must already be running and reachable from the MEERA backend. This integration connects MEERA's chat replies to GLM; it does **not** turn the chat into a repository-editing coding agent. A separate sandboxed coding-agent service and narrowly scoped GitHub authorization are still required for that capability.
