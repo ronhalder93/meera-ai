@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#120e20"><title>MEERA · 3D Studio</title>
+<style>
+:root{color-scheme:dark;--bg:#100d19;--panel:#1c1728;--line:#342b46;--muted:#b6abc9;--pink:#e8a6d2;--lav:#b9a5ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% 0,#30203c 0,transparent 55%),var(--bg);color:#f8f3ff;font:15px system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+header{height:64px;display:flex;align-items:center;gap:16px;padding:0 20px;border-bottom:1px solid var(--line);background:#100d19cc;position:sticky;top:0;z-index:3;backdrop-filter:blur(12px)}
+a{color:var(--pink);text-decoration:none}header strong{font-size:18px;letter-spacing:.02em}header .spacer{flex:1}main{max-width:1100px;margin:auto;padding:22px;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(270px,.8fr);gap:18px}
+.viewer,.panel{background:#1a1525;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 18px 60px #0003}.viewer{min-height:440px;position:relative}canvas{display:block;width:100%;height:100%;min-height:440px;touch-action:pan-y}
+.viewer-hint{position:absolute;inset:auto 14px 14px;padding:10px 13px;border-radius:12px;background:#100d19cc;color:#d9cde8;font-size:13px;pointer-events:none}
+.panel{padding:20px}.eyebrow{color:var(--pink);font-size:11px;letter-spacing:.16em;font-weight:700}.panel h1{font-size:25px;margin:7px 0}.muted{color:var(--muted);line-height:1.5;font-size:13px}
+.drop{margin:18px 0;border:1px dashed #806a9a;border-radius:14px;padding:18px;text-align:center;background:#241b32}.drop.drag{border-color:var(--pink);background:#38243b}.drop input{display:none}.choose{display:inline-block;margin-top:10px;padding:10px 15px;background:#dca2cf;color:#241326;border-radius:10px;font-weight:700;cursor:pointer}
+label{display:block;margin:16px 0 7px;color:#d9cde8;font-size:13px}select,button{font:inherit}select{width:100%;background:#100d19;color:#fff;border:1px solid var(--line);border-radius:10px;padding:12px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}button{border:1px solid var(--line);background:#2a2238;color:#fff;padding:11px;border-radius:10px;cursor:pointer}button.primary{background:linear-gradient(110deg,#dba2ce,#b7a5ff);color:#21142b;border:0;font-weight:700}button:disabled{opacity:.4;cursor:not-allowed}
+.status{margin-top:15px;padding:12px;border-radius:10px;background:#100d19;color:#d8cde7;font-size:12px;line-height:1.5;overflow-wrap:anywhere}.status.good{color:#a8e5c0}.status.bad{color:#ffb5bf}.note{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+@media(max-width:760px){main{grid-template-columns:1fr;padding:12px}.viewer{min-height:340px}canvas{min-height:340px}.panel{order:2}}
+</style>
+</head>
+<body>
+<header><a href="/">← MEERA</a><strong>3D Studio</strong><span class="spacer"></span><span class="eyebrow">CHARACTER LAB</span></header>
+<main>
+<section class="viewer"><canvas id="stage"></canvas><div class="viewer-hint" id="hint">Import a rigged .glb character to preview it here. Drag to rotate · pinch to zoom.</div></section>
+<aside class="panel">
+<div class="eyebrow">MEERA CHARACTER WORKSPACE</div><h1>3D character & dance</h1>
+<p class="muted">Load a rigged GLB file. The studio detects animation clips embedded in the model and lets you preview them on your phone.</p>
+<div class="drop" id="drop"><div style="font-size:30px">♙</div><strong>Import your character</strong><p class="muted">Choose a .glb file with a humanoid rig. Embedded dance clips will appear below.</p><label class="choose" for="modelFile">Choose GLB file</label><input id="modelFile" type="file" accept=".glb,model/gltf-binary"></div>
+<label for="clipSelect">Animation clip</label><select id="clipSelect" disabled><option>No model loaded</option></select>
+<div class="actions"><button class="primary" id="play" disabled>▶ Play</button><button id="stop" disabled>■ Stop</button></div>
+<div class="actions"><button id="reset" disabled>↺ Reset view</button><button id="clear" disabled>Remove model</button></div>
+<div class="status" id="status" role="status">Waiting for a GLB character file.</div>
+<div class="note"><strong>What this does</strong><p class="muted">This is a viewer and animation tester, not an image-to-3D generator. A still PNG/JPG cannot animate by itself; the imported GLB must already contain a skeleton and animation clips. No file is uploaded to a server.</p></div>
+</aside>
+</main>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const canvas=document.querySelector('#stage'),status=document.querySelector('#status'),hint=document.querySelector('#hint');
+const scene=new THREE.Scene();scene.background=new THREE.Color('#171222');
+const camera=new THREE.PerspectiveCamera(35,1,.1,100);camera.position.set(0,1.35,4.2);
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=THREE.SRGBColorSpace;
+scene.add(new THREE.HemisphereLight(0xffffff,0x44334f,2));
+const key=new THREE.DirectionalLight(0xffe5f6,2.4);key.position.set(3,5,4);scene.add(key);
+const fill=new THREE.DirectionalLight(0xb9a5ff,1.2);fill.position.set(-4,2,-3);scene.add(fill);
+const floor=new THREE.Mesh(new THREE.CircleGeometry(2.2,64),new THREE.MeshStandardMaterial({color:0x30263b,roughness:.85}));floor.rotation.x=-Math.PI/2;floor.position.y=-.015;scene.add(floor);
+const grid=new THREE.GridHelper(5,20,0x695777,0x382d47);grid.position.y=-.008;scene.add(grid);
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,1,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.88;
+const loader=new GLTFLoader();let model=null,mixer=null,actions=[],active=null,objectUrl=null;
+function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(canvas);resize();
+function say(text,kind=''){status.textContent=text;status.className='status '+kind}
+function frameModel(root){const box=new THREE.Box3().setFromObject(root);if(box.isEmpty())return;const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());root.position.x-=center.x;root.position.z-=center.z;root.position.y-=box.min.y;const max=Math.max(size.x,size.y,size.z);camera.position.set(0,Math.max(1.1,size.y*.55),Math.max(2.6,max*2.35));controls.target.set(0,size.y*.48,0);controls.update()}
+function stopAnimation(){if(active){active.stop();active=null}}
+function removeModel(){stopAnimation();if(model){scene.remove(model);model.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose()}});model=null}mixer=null;actions=[];document.querySelector('#clipSelect').innerHTML='<option>No model loaded</option>';document.querySelector('#clipSelect').disabled=true;['play','stop','reset','clear'].forEach(id=>document.getElementById(id).disabled=true);hint.hidden=false;if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null}say('Waiting for a GLB character file.')}
+async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.glb')){say('Please choose a .glb file. This viewer expects a binary GLB.','bad');return}removeModel();say('Loading '+file.name+'…');objectUrl=URL.createObjectURL(file);try{const gltf=await loader.loadAsync(objectUrl);model=gltf.scene;scene.add(model);frameModel(model);mixer=new THREE.AnimationMixer(model);actions=gltf.animations||[];const select=document.querySelector('#clipSelect');select.innerHTML='';if(actions.length){actions.forEach((clip,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=clip.name||('Animation '+(i+1));select.append(option)});select.disabled=false;active=mixer.clipAction(actions[0]);active.play();document.querySelector('#play').textContent='Ⅱ Pause';say('Loaded '+file.name+' · '+actions.length+' animation clip(s). First clip is playing.','good')}else{select.innerHTML='<option>No embedded animation clips</option>';select.disabled=true;say('Model loaded, but no animation clips were found. This GLB may be rigged but has no dance animation.','bad')}['play','stop','reset','clear'].forEach(id=>document.getElementById(id).disabled=false);hint.hidden=true}catch(err){console.error(err);say('Could not load this GLB: '+(err.message||'unknown error'),'bad');removeModel()}}
+document.querySelector('#modelFile').addEventListener('change',e=>loadFile(e.target.files[0]));
+const drop=document.querySelector('#drop');drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');loadFile(e.dataTransfer.files[0])});
+document.querySelector('#clipSelect').addEventListener('change',e=>{if(!mixer)return;stopAnimation();active=mixer.clipAction(actions[Number(e.target.value)]);active.reset().play();document.querySelector('#play').textContent='Ⅱ Pause'});
+document.querySelector('#play').addEventListener('click',()=>{if(!active&&mixer&&actions.length){active=mixer.clipAction(actions[Number(document.querySelector('#clipSelect').value)]);active.play()}else if(active){active.paused=!active.paused}document.querySelector('#play').textContent=active?.paused?'▶ Play':'Ⅱ Pause'});
+document.querySelector('#stop').addEventListener('click',()=>{stopAnimation();document.querySelector('#play').textContent='▶ Play'});
+document.querySelector('#reset').addEventListener('click',()=>{if(model)frameModel(model)});
+document.querySelector('#clear').addEventListener('click',removeModel);
+const clock=new THREE.Clock();function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);if(mixer)mixer.update(dt);controls.update();renderer.render(scene,camera)}animate();
+</script>
+</body></html>
