@@ -314,8 +314,6 @@ for side in (-0.5, 0.5):
     edge=bpy.data.objects.new("Saree | pallu magenta edge",curve)
     bpy.context.collection.objects.link(edge); edge.data.materials.append(pink)
     edge.parent=arm
-    if spine and spine in arm.data.bones:
-        vg=edge.vertex_groups.new(name=spine)
 
 # Hair bun and centre-parted cap; restrained jewellery and bindi.
 def uv_sphere(name, location, scale, material, bone_name=None):
