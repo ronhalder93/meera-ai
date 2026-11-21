@@ -35,6 +35,16 @@ jobs:
           mkdir -p build/meera
           blender --background --python scripts/blender/build_meera_base.py -- /tmp/mpfb2.zip build/meera
 
+      - name: Validate final character deliverables
+        run: |
+          test -s build/meera/meera_base.blend
+          test -s build/meera/meera_base.glb
+          test -s build/meera/meera_final.blend
+          test -s build/meera/meera_final.glb
+          test -s build/meera/meera_preview.png
+          file build/meera/meera_final.glb
+          file build/meera/meera_preview.png
+
       - name: Upload generated base assets
         uses: actions/upload-artifact@v4
         with:
@@ -42,5 +52,8 @@ jobs:
           path: |
             build/meera/meera_base.blend
             build/meera/meera_base.glb
+            build/meera/meera_final.blend
+            build/meera/meera_final.glb
+            build/meera/meera_preview.png
           if-no-files-found: error
           retention-days: 30
