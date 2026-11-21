@@ -8,6 +8,7 @@ from typing import Literal
 
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -15,6 +16,13 @@ from pydantic import BaseModel, Field
 BASE_DIR = Path(__file__).resolve().parent
 APP_VERSION = 2
 app = FastAPI(title="MEERA")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://meera-3d-studio.onrender.com"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 ADULT_RULE = (
