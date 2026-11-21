@@ -206,6 +206,8 @@ lime = make_mat("Blouse | lime green", (0.42, 0.68, 0.08))
 black = make_mat("Hair | natural black", (0.018, 0.012, 0.01))
 silver = make_mat("Jewellery | silver", (0.65, 0.68, 0.72), 0.78, 0.24)
 skin_accent = make_mat("Bindi | deep maroon", (0.22, 0.008, 0.025))
+eye_mat = make_mat("Eyes | deep brown", (0.035, 0.018, 0.012), 0.0, 0.3)
+lip_mat = make_mat("Lips | muted rose", (0.38, 0.075, 0.09), 0.0, 0.55)
 
 def to_blender_space(point):
     # Procedural costume coordinates are authored Y-up; Blender scene is Z-up.
@@ -330,8 +332,14 @@ def uv_sphere(name, location, scale, material, bone_name=None):
         mod=ob.modifiers.new("Follow head rig","ARMATURE"); mod.object=arm
         vg=ob.vertex_groups.new(name=bone_name); vg.add(list(range(len(ob.data.vertices))),1.0,"REPLACE")
     return ob
-uv_sphere("Hair | gathered bun", (0,1.355,0.205), (0.105,0.105,0.085), black, head)
-uv_sphere("Bindi", (0,1.245,-0.148), (0.018,0.025,0.009), skin_accent, head)
+uv_sphere("Hair | crown", (0,1.385,0.075), (0.125,0.12,0.095), black, head)
+uv_sphere("Hair | gathered bun", (0,1.365,0.205), (0.105,0.105,0.085), black, head)
+# Simple readable facial features on the front plane of the head.
+uv_sphere("Eye | left", (-0.043,1.375,-0.105), (0.012,0.009,0.006), eye_mat, head)
+uv_sphere("Eye | right", (0.043,1.375,-0.105), (0.012,0.009,0.006), eye_mat, head)
+uv_sphere("Nose", (0,1.345,-0.125), (0.010,0.018,0.012), ivory, head)
+uv_sphere("Mouth", (0,1.315,-0.119), (0.025,0.007,0.006), lip_mat, head)
+uv_sphere("Bindi", (0,1.415,-0.108), (0.012,0.016,0.007), skin_accent, head)
 
 def torus_accessory(name, location, major, minor, material, bone_name=None):
     bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor,
@@ -341,8 +349,8 @@ def torus_accessory(name, location, major, minor, material, bone_name=None):
         mod=ob.modifiers.new("Follow rig","ARMATURE"); mod.object=arm
         vg=ob.vertex_groups.new(name=bone_name); vg.add(list(range(len(ob.data.vertices))),1.0,"REPLACE")
     return ob
-torus_accessory("Necklace | silver chain", (0,1.155,-0.135), 0.105, 0.006, silver, head)
-uv_sphere("Necklace | pendant", (0,1.045,-0.145), (0.026,0.038,0.012), silver, spine or head)
+torus_accessory("Necklace | silver chain", (0,1.205,-0.115), 0.075, 0.006, silver, head)
+uv_sphere("Necklace | pendant", (0,1.145,-0.155), (0.026,0.038,0.012), silver, spine or head)
 torus_accessory("Bangle | left", (-0.265,0.84,-0.015), 0.043, 0.006, silver, upper_arm_l)
 torus_accessory("Bangle | right", (0.265,0.84,-0.015), 0.043, 0.006, silver, upper_arm_r)
 
@@ -350,7 +358,7 @@ torus_accessory("Bangle | right", (0.265,0.84,-0.015), 0.043, 0.006, silver, upp
 bpy.ops.object.select_all(action="DESELECT")
 for obj in bpy.context.scene.objects:
     if obj == arm or obj == human or obj.name.startswith((
-        "Saree", "Blouse", "Hair", "Bindi", "Necklace", "Bangle"
+        "Saree", "Blouse", "Hair", "Bindi", "Eye", "Nose", "Mouth", "Necklace", "Bangle"
     )):
         obj.select_set(True)
 arm.select_set(True)
