@@ -122,46 +122,46 @@ def pose(**values):
 
 # Relaxed idle: subtle spine/chest/head motion.
 author_clip("idle", [
-    (1, pose(**{spine: (0, 0, 0), chest: (0, 0, 0), head: (0, 0, 0)})),
-    (30, pose(**{spine: (0.025, 0, 0), chest: (-0.035, 0, 0),
+    (1, pose(**{str(spine): (0, 0, 0), str(chest): (0, 0, 0), str(head): (0, 0, 0)})),
+    (30, pose(**{str(spine): (0.025, 0, 0), str(chest): (-0.035, 0, 0),
                  head: (0, 0.025, 0)})),
-    (60, pose(**{spine: (0, 0, 0), chest: (0, 0, 0), head: (0, 0, 0)})),
+    (60, pose(**{str(spine): (0, 0, 0), str(chest): (0, 0, 0), str(head): (0, 0, 0)})),
 ])
 
 # Gentle dance: coordinated arm and torso sway.
 author_clip("dance_gentle", [
-    (1, pose(**{upper_arm_l: (0, 0, -0.25), upper_arm_r: (0, 0, 0.25),
+    (1, pose(**{str(upper_arm_l): (0, 0, -0.25), str(upper_arm_r): (0, 0, 0.25),
                 spine: (0, 0, -0.08)})),
-    (16, pose(**{upper_arm_l: (0, 0, -0.65), upper_arm_r: (0, 0, 0.65),
-                 spine: (0, 0, 0.10), head: (0, 0, -0.06)})),
-    (32, pose(**{upper_arm_l: (0, 0, -0.25), upper_arm_r: (0, 0, 0.25),
+    (16, pose(**{str(upper_arm_l): (0, 0, -0.65), str(upper_arm_r): (0, 0, 0.65),
+                 spine: (0, 0, 0.10), str(head): (0, 0, -0.06)})),
+    (32, pose(**{str(upper_arm_l): (0, 0, -0.25), str(upper_arm_r): (0, 0, 0.25),
                  spine: (0, 0, -0.08)})),
-    (48, pose(**{upper_arm_l: (0, 0, -0.65), upper_arm_r: (0, 0, 0.65),
-                 spine: (0, 0, 0.10), head: (0, 0, 0.06)})),
-    (64, pose(**{upper_arm_l: (0, 0, -0.25), upper_arm_r: (0, 0, 0.25),
+    (48, pose(**{str(upper_arm_l): (0, 0, -0.65), str(upper_arm_r): (0, 0, 0.65),
+                 spine: (0, 0, 0.10), str(head): (0, 0, 0.06)})),
+    (64, pose(**{str(upper_arm_l): (0, 0, -0.25), str(upper_arm_r): (0, 0, 0.25),
                  spine: (0, 0, -0.08)})),
 ])
 
 # Fuller in-place dance with alternating knee bends and arm sweeps.
 author_clip("dance_full", [
-    (1, pose(**{upper_arm_l: (0, 0, -1.0), upper_arm_r: (0, 0, 0.3),
-                thigh_l: (0.18, 0, 0), calf_l: (-0.12, 0, 0), spine: (0, 0, -0.12)})),
-    (12, pose(**{upper_arm_l: (0, 0, -0.25), upper_arm_r: (0, 0, 1.0),
-                 thigh_r: (0.18, 0, 0), calf_r: (-0.12, 0, 0), spine: (0, 0, 0.12)})),
-    (24, pose(**{upper_arm_l: (0, 0, 0.3), upper_arm_r: (0, 0, -1.0),
-                 thigh_l: (-0.12, 0, 0), spine: (0, 0, 0.12)})),
-    (36, pose(**{upper_arm_l: (0, 0, 1.0), upper_arm_r: (0, 0, -0.25),
-                 thigh_r: (-0.12, 0, 0), spine: (0, 0, -0.12)})),
-    (48, pose(**{upper_arm_l: (0, 0, -1.0), upper_arm_r: (0, 0, 0.3),
-                 thigh_l: (0.18, 0, 0), calf_l: (-0.12, 0, 0), spine: (0, 0, -0.12)})),
+    (1, pose(**{str(upper_arm_l): (0, 0, -1.0), str(upper_arm_r): (0, 0, 0.3),
+                thigh_l: (0.18, 0, 0), str(calf_l): (-0.12, 0, 0), str(spine): (0, 0, -0.12)})),
+    (12, pose(**{str(upper_arm_l): (0, 0, -0.25), str(upper_arm_r): (0, 0, 1.0),
+                 thigh_r: (0.18, 0, 0), str(calf_r): (-0.12, 0, 0), str(spine): (0, 0, 0.12)})),
+    (24, pose(**{str(upper_arm_l): (0, 0, 0.3), str(upper_arm_r): (0, 0, -1.0),
+                 thigh_l: (-0.12, 0, 0), str(spine): (0, 0, 0.12)})),
+    (36, pose(**{str(upper_arm_l): (0, 0, 1.0), str(upper_arm_r): (0, 0, -0.25),
+                 thigh_r: (-0.12, 0, 0), str(spine): (0, 0, -0.12)})),
+    (48, pose(**{str(upper_arm_l): (0, 0, -1.0), str(upper_arm_r): (0, 0, 0.3),
+                 thigh_l: (0.18, 0, 0), str(calf_l): (-0.12, 0, 0), str(spine): (0, 0, -0.12)})),
 ])
 
 # Inspection turn: rotate the root/pelvis through a full revolution.
 turn_bone = root or spine
 author_clip("turn_360", [
-    (1, pose(**{turn_bone: (0, 0, 0)})),
-    (31, pose(**{turn_bone: (0, 0, math.pi)})),
-    (61, pose(**{turn_bone: (0, 0, 2 * math.pi)})),
+    (1, pose(**{str(turn_bone): (0, 0, 0)})),
+    (31, pose(**{str(turn_bone): (0, 0, math.pi)})),
+    (61, pose(**{str(turn_bone): (0, 0, 2 * math.pi)})),
 ])
 
 bpy.context.scene.frame_start = 1
