@@ -1,0 +1,46 @@
+name: Build MEERA adult base character
+
+on:
+  push:
+    paths:
+      - "scripts/blender/build_meera_base.py"
+      - ".github/workflows/meera-character-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-base:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Blender 4.5.9
+        run: |
+          curl -L https://download.blender.org/release/Blender4.5/blender-4.5.9-linux-x64.tar.xz -o /tmp/blender.tar.xz
+          tar -xJf /tmp/blender.tar.xz -C /tmp
+          echo "/tmp/blender-4.5.9-linux-x64" >> "$GITHUB_PATH"
+          /tmp/blender-4.5.9-linux-x64/blender --background --version
+
+      - name: Download MPFB2
+        run: |
+          curl -L https://files.makehumancommunity.org/plugins/mpfb2-latest.zip -o /tmp/mpfb2.zip
+          test -s /tmp/mpfb2.zip
+
+      - name: Build MEERA base mesh, rig and motion clips
+        run: |
+          mkdir -p build/meera
+          blender --background --python scripts/blender/build_meera_base.py -- /tmp/mpfb2.zip build/meera
+
+      - name: Upload generated base assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: meera-adult-base
+          path: |
+            build/meera/meera_base.blend
+            build/meera/meera_base.glb
+          if-no-files-found: error
+          retention-days: 30
