@@ -215,9 +215,6 @@ def mesh_object(name, verts, faces, material, bone_name=None):
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
     if bone_name and bone_name in arm.data.bones:
-        world_matrix = obj.matrix_world.copy()
-        obj.parent = arm
-        obj.matrix_world = world_matrix
         mod = obj.modifiers.new("Meera rig", "ARMATURE")
         mod.object = arm
         group = obj.vertex_groups.new(name=bone_name)
@@ -315,9 +312,7 @@ for side in (-0.5, 0.5):
                              cy+0.025*math.sin(side*math.pi*2),cz-0.018,1)
     edge=bpy.data.objects.new("Saree | pallu magenta edge",curve)
     bpy.context.collection.objects.link(edge); edge.data.materials.append(pink)
-    world_matrix = edge.matrix_world.copy()
-    edge.parent = arm
-    edge.matrix_world = world_matrix
+    # Keep trim curves in world space; they are decorative, not skinned.
 
 # Hair bun and centre-parted cap; restrained jewellery and bindi.
 def uv_sphere(name, location, scale, material, bone_name=None):
@@ -326,9 +321,6 @@ def uv_sphere(name, location, scale, material, bone_name=None):
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     ob.data.materials.append(material)
     if bone_name and bone_name in arm.data.bones:
-        world_matrix = ob.matrix_world.copy()
-        ob.parent = arm
-        ob.matrix_world = world_matrix
         mod=ob.modifiers.new("Follow head rig","ARMATURE"); mod.object=arm
         vg=ob.vertex_groups.new(name=bone_name); vg.add(list(range(len(ob.data.vertices))),1.0,"REPLACE")
     return ob
@@ -340,9 +332,6 @@ def torus_accessory(name, location, major, minor, material, bone_name=None):
                                     major_segments=48, minor_segments=10, location=location)
     ob=bpy.context.object; ob.name=name; ob.data.materials.append(material)
     if bone_name and bone_name in arm.data.bones:
-        world_matrix = ob.matrix_world.copy()
-        ob.parent = arm
-        ob.matrix_world = world_matrix
         mod=ob.modifiers.new("Follow rig","ARMATURE"); mod.object=arm
         vg=ob.vertex_groups.new(name=bone_name); vg.add(list(range(len(ob.data.vertices))),1.0,"REPLACE")
     return ob
