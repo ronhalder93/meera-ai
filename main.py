@@ -9,7 +9,7 @@ from typing import Literal
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -83,6 +83,23 @@ PROVIDERS = {
 @app.get("/")
 async def home():
     return FileResponse(BASE_DIR / "static" / "index.html")
+
+
+@app.get("/api/avatar")
+async def avatar():
+    """Proxy the published MEERA GLB through the API origin to avoid browser CORS failures."""
+    url = "https://github.com/ronhalder93/meera-ai/releases/download/meera-live-assets/meera_final.glb"
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=90.0) as client:
+            upstream = await client.get(url)
+            upstream.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Avatar asset fetch failed: {exc}") from exc
+    return Response(
+        content=upstream.content,
+        media_type="model/gltf-binary",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
 
 
 @app.get("/health")
