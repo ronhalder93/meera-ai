@@ -31,8 +31,9 @@ async function loadAraAnimations(){
   try{
    const ara=await import('https://cdn.jsdelivr.net/npm/ara3d@0/dist/index.js');
    const defs=ara.ANIMATIONS||[];
-   const wanted=/^(idle|walk|slouch walk|model walk|turn left|turn right|turn 45|turn 90|turn 360|wave|cheer|laugh|laugh hard|talk|talk with gestures|clap|dance|dance \(groove\)|dance \(party bounce\)|point|thumbs up|bow|sit down|sit idle|stand up|lie down|sleep|phone call|texting|take a picture|lean on wall|look around|sweep|pick up|put down|use \/ press|open door)$/i;
-   const selected=defs.filter(def=>wanted.test((def.name||def.id||'').trim()));
+   const wanted=/idle|walk|turn|wave|cheer|laugh|talk|clap|dance|point|thumbs up|bow|sit down|sit idle|stand up|lie down|sleep|phone call|texting|take a picture|lean on wall|look around|sweep|pick up|put down|use.?press|open door/i;
+   const excluded=/combat|shooter|weapon|vehicle|sports|swim|climb|parachut|run|sprint|strafe|dodge|vault|roll|jump|fall|hit|death/i;
+   const selected=defs.filter(def=>wanted.test((def.name||def.id||'').trim())&&!excluded.test([def.group,def.category].filter(Boolean).join(' ')));
    if(!selected.length)throw new Error('Could not find the everyday animation set in Ara library.');
    source=await ara.createCharacter('The Female Executive',{animations:selected.map(def=>def.id),detail:'low',rootMotion:false});
    source.scene.updateMatrixWorld(true);model.updateMatrixWorld(true);
