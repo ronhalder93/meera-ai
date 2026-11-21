@@ -24,8 +24,8 @@ label{display:block;margin:16px 0 7px;color:#d9cde8;font-size:13px}select,button
 <section class="viewer"><canvas id="stage"></canvas><div class="viewer-hint" id="hint">Import a rigged .glb character to preview it here. Drag to rotate · pinch to zoom.</div></section>
 <aside class="panel">
 <div class="eyebrow">MEERA CHARACTER WORKSPACE</div><h1>3D character & dance</h1>
-<p class="muted">Load a rigged GLB file. The studio detects animation clips embedded in the model and lets you preview them on your phone.</p>
-<div class="drop" id="drop"><div style="font-size:30px">♙</div><strong>Import your character</strong><p class="muted">Choose a .glb file with a humanoid rig. Embedded dance clips will appear below.</p><label class="choose" for="modelFile">Choose GLB file</label><input id="modelFile" type="file" accept=".glb,model/gltf-binary"></div>
+<p class="muted">MEERA loads automatically with her built-in animations. Choose a clip and press Play; you can still import another compatible GLB if needed.</p>
+<div class="drop" id="drop"><div style="font-size:30px">♙</div><strong>MEERA live avatar is preloaded</strong><p class="muted">Your MEERA rig and embedded clips load automatically. Use this only to replace the character.</p><label class="choose" for="modelFile">Choose GLB file</label><input id="modelFile" type="file" accept=".glb,model/gltf-binary"></div>
 <label for="clipSelect">Animation clip</label><select id="clipSelect" disabled><option>No model loaded</option></select>
 <div class="drop" id="animDrop"><div style="font-size:25px">♫</div><strong>Add animation to MEERA</strong><p class="muted">Import a second rigged .glb that contains animation clips. Clips are added to the character above; matching humanoid bone names are required.</p><label class="choose" for="animationFile">Choose animation GLB</label><input id="animationFile" type="file" accept=".glb,model/gltf-binary" disabled></div>
 <p class="muted" id="animationHint">Load MEERA's rigged character first, then add an animation GLB.</p>
@@ -120,6 +120,9 @@ document.querySelector('#play').addEventListener('click',()=>{if(!active&&mixer&
 document.querySelector('#stop').addEventListener('click',()=>{stopAnimation();document.querySelector('#play').textContent='▶ Play'});
 document.querySelector('#reset').addEventListener('click',()=>{if(model)frameModel(model)});
 document.querySelector('#clear').addEventListener('click',removeModel);
+// Load the published MEERA character and its embedded clips automatically.
+const MEERA_LIVE_GLB='https://github.com/ronhalder93/meera-ai/releases/download/meera-live-assets/meera_final.glb';
+(async()=>{try{say('Loading MEERA live avatar and built-in animations…');const response=await fetch(MEERA_LIVE_GLB);if(!response.ok)throw new Error('Live character asset is not published yet');const blob=await response.blob();await loadFile(new File([blob],'meera_final.glb',{type:'model/gltf-binary'}));}catch(err){console.error(err);say('MEERA auto-load could not complete. You can still choose the GLB manually. '+(err.message||''),'bad')}})();
 const clock=new THREE.Clock();function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);if(mixer)mixer.update(dt);controls.update();renderer.render(scene,camera)}animate();
 </script>
 </body></html>
