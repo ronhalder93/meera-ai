@@ -30,11 +30,15 @@ async function loadAraAnimations(){
   let source=null;
   try{
    const ara=await import('https://cdn.jsdelivr.net/npm/ara3d@0/dist/index.js');
-   source=await ara.createCharacter('The Female Executive',{animations:'all',detail:'low',rootMotion:false});
+   const defs=ara.ANIMATIONS||[];
+   const wanted=/^(idle|walk|slouch walk|model walk|turn left|turn right|turn 45|turn 90|turn 360|wave|cheer|laugh|laugh hard|talk|talk with gestures|clap|dance|dance \(groove\)|dance \(party bounce\)|point|thumbs up|bow|sit down|sit idle|stand up|lie down|sleep|phone call|texting|take a picture|lean on wall|look around|sweep|pick up|put down|use \/ press|open door)$/i;
+   const selected=defs.filter(def=>wanted.test((def.name||def.id||'').trim()));
+   if(!selected.length)throw new Error('Could not find the everyday animation set in Ara library.');
+   source=await ara.createCharacter('The Female Executive',{animations:selected.map(def=>def.id),detail:'low',rootMotion:false});
    source.scene.updateMatrixWorld(true);model.updateMatrixWorld(true);
-   const defs=ara.ANIMATIONS||[],existing=new Set(clipNames.map(n=>n.toLowerCase()));
+   const existing=new Set(clipNames.map(n=>n.toLowerCase()));
    let added=0,failed=0;
-   for(const def of defs){
+   for(const def of selected){
     const original=source.clip(def.id);
     if(!original)continue;
     try{
