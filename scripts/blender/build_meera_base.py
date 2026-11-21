@@ -207,7 +207,13 @@ black = make_mat("Hair | natural black", (0.018, 0.012, 0.01))
 silver = make_mat("Jewellery | silver", (0.65, 0.68, 0.72), 0.78, 0.24)
 skin_accent = make_mat("Bindi | deep maroon", (0.22, 0.008, 0.025))
 
+def to_blender_space(point):
+    # Procedural costume coordinates are authored Y-up; Blender scene is Z-up.
+    x, y, z = point
+    return (x, -z, y)
+
 def mesh_object(name, verts, faces, material, bone_name=None):
+    verts = [to_blender_space(v) for v in verts]
     mesh = bpy.data.meshes.new(name + "Mesh")
     mesh.from_pydata(verts, [], faces)
     mesh.materials.append(material)
@@ -308,15 +314,15 @@ for side in (-0.5, 0.5):
     for j in range(pr + 1):
         t=j/pr; cx=-0.095+0.20*t; cy=1.205-0.59*t
         cz=-0.115-0.045*math.sin(math.pi*t)
-        spline.points[j].co=(cx+side*0.255*(0.88+0.12*math.sin(math.pi*t)),
-                             cy+0.025*math.sin(side*math.pi*2),cz-0.018,1)
+        spline.points[j].co=to_blender_space((cx+side*0.255*(0.88+0.12*math.sin(math.pi*t)),
+                             cy+0.025*math.sin(side*math.pi*2),cz-0.018)) + (1,)
     edge=bpy.data.objects.new("Saree | pallu magenta edge",curve)
     bpy.context.collection.objects.link(edge); edge.data.materials.append(pink)
     # Keep trim curves in world space; they are decorative, not skinned.
 
 # Hair bun and centre-parted cap; restrained jewellery and bindi.
 def uv_sphere(name, location, scale, material, bone_name=None):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=16, location=location)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=16, location=to_blender_space(location))
     ob=bpy.context.object; ob.name=name; ob.scale=scale
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     ob.data.materials.append(material)
@@ -329,7 +335,7 @@ uv_sphere("Bindi", (0,1.245,-0.148), (0.018,0.025,0.009), skin_accent, head)
 
 def torus_accessory(name, location, major, minor, material, bone_name=None):
     bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor,
-                                    major_segments=48, minor_segments=10, location=location)
+                                    major_segments=48, minor_segments=10, location=to_blender_space(location))
     ob=bpy.context.object; ob.name=name; ob.data.materials.append(material)
     if bone_name and bone_name in arm.data.bones:
         mod=ob.modifiers.new("Follow rig","ARMATURE"); mod.object=arm
@@ -363,9 +369,10 @@ scene.render.engine="BLENDER_EEVEE_NEXT"
 scene.render.resolution_x=640; scene.render.resolution_y=900
 scene.render.resolution_percentage=100
 scene.render.image_settings.file_format="PNG"
-bpy.ops.object.camera_add(location=(0.0,0.72,-4.0))
+bpy.ops.object.camera_add(location=(0.0,-4.0,0.72))
 cam=bpy.context.object; cam.name="Meera preview camera"
-cam.rotation_euler=(0.0, math.pi, 0.0)
+direction=mathutils.Vector((0.0,0.0,0.72))-cam.location
+cam.rotation_euler=direction.to_track_quat("-Z","Y").to_euler()
 cam.data.type="ORTHO"; cam.data.ortho_scale=1.65
 scene.camera=cam
 scene.render.filepath=os.path.join(out_dir,"meera_preview.png")
