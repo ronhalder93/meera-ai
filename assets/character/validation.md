@@ -1,6 +1,6 @@
 # MEERA character build validation
 
-Build workflow: [Build MEERA adult base character](https://github.com/ronhalder93/meera-ai/actions/workflows/meera-character-build.yml)
+Build workflow: [successful run #44920767816](https://github.com/ronhalder93/meera-ai/actions/runs/44920767816) · [workflow](https://github.com/ronhalder93/meera-ai/actions/workflows/meera-character-build.yml)
 
 ## Generated outputs
 
@@ -18,7 +18,7 @@ The workflow produces these files as the `meera-adult-base` artifact:
 - MPFB2 creates the adult human mesh and humanoid game-engine rig.
 - Base and final GLB exports are written.
 - The final scene includes the saree wrap and pallu, lime blouse, hair bun, bindi, necklace, pendant and bangles.
-- The named animation actions are authored: `idle`, `dance_gentle`, `dance_full`, and `turn_360`.
+- The final GLB embeds four named animation clips: `idle`, `dance_gentle`, `dance_full`, and `turn_360` (confirmed in the GLB animation metadata).
 - The workflow verifies that the expected binary deliverables exist and uploads them as a downloadable artifact.
 
 ## Known limitations
