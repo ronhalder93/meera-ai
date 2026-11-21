@@ -83,4 +83,6 @@ If binary assets are stored outside Git (for example, via Git LFS or object stor
 
 ## Current status — do not overstate
 
-The repository currently contains the viewer/tester and this production specification. The viewer is **not** a model generator. No actual base mesh, dressed character, rigged GLB, animation clips or preview image should be considered delivered until the corresponding asset files are present and validated.
+The Blender/MPFB2 build pipeline now generates the adult base, dressed same-identity character, humanoid rig, named animation actions, GLB exports and preview image. The files are published as a downloadable `meera-adult-base` GitHub Actions artifact (30-day retention), not committed as large binaries. See [validation.md](validation.md) for the exact outputs and remaining review limitations.
+
+The viewer/tester is **not** a model generator. Automated build/export success does not mean the procedural saree is photo-matched or that the animation has passed full manual deformation QA. Do not mark the production acceptance checklist complete until the GLB has been inspected and all clips played in the MEERA 3D Studio viewer.
