@@ -2,6 +2,10 @@ name: Inspect upstream animation library
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/inspect-upstream-animations.yml'
+      - 'scripts/inspect_blend_actions.py'
 
 permissions:
   contents: read
