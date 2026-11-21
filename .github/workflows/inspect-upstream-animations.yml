@@ -1,0 +1,29 @@
+name: Inspect upstream animation library
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+      - name: Fetch upstream animation library
+        run: |
+          mkdir -p /tmp/upstream
+          curl -fL --retry 3 "https://raw.githubusercontent.com/Kertero/Land-of-desire/main/Characters/animations.blend" -o /tmp/upstream/animations.blend
+          ls -lh /tmp/upstream/animations.blend
+      - name: Inspect animation actions
+        run: |
+          blender -b /tmp/upstream/animations.blend --python scripts/inspect_blend_actions.py -- --output animation-inventory.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: upstream-animation-inventory
+          path: animation-inventory.json
