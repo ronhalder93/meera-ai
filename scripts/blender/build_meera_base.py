@@ -215,7 +215,9 @@ def mesh_object(name, verts, faces, material, bone_name=None):
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
     if bone_name and bone_name in arm.data.bones:
+        world_matrix = obj.matrix_world.copy()
         obj.parent = arm
+        obj.matrix_world = world_matrix
         mod = obj.modifiers.new("Meera rig", "ARMATURE")
         mod.object = arm
         group = obj.vertex_groups.new(name=bone_name)
@@ -313,7 +315,9 @@ for side in (-0.5, 0.5):
                              cy+0.025*math.sin(side*math.pi*2),cz-0.018,1)
     edge=bpy.data.objects.new("Saree | pallu magenta edge",curve)
     bpy.context.collection.objects.link(edge); edge.data.materials.append(pink)
-    edge.parent=arm
+    world_matrix = edge.matrix_world.copy()
+    edge.parent = arm
+    edge.matrix_world = world_matrix
 
 # Hair bun and centre-parted cap; restrained jewellery and bindi.
 def uv_sphere(name, location, scale, material, bone_name=None):
@@ -322,7 +326,9 @@ def uv_sphere(name, location, scale, material, bone_name=None):
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     ob.data.materials.append(material)
     if bone_name and bone_name in arm.data.bones:
-        ob.parent=arm
+        world_matrix = ob.matrix_world.copy()
+        ob.parent = arm
+        ob.matrix_world = world_matrix
         mod=ob.modifiers.new("Follow head rig","ARMATURE"); mod.object=arm
         vg=ob.vertex_groups.new(name=bone_name); vg.add(list(range(len(ob.data.vertices))),1.0,"REPLACE")
     return ob
@@ -334,7 +340,9 @@ def torus_accessory(name, location, major, minor, material, bone_name=None):
                                     major_segments=48, minor_segments=10, location=location)
     ob=bpy.context.object; ob.name=name; ob.data.materials.append(material)
     if bone_name and bone_name in arm.data.bones:
-        ob.parent=arm
+        world_matrix = ob.matrix_world.copy()
+        ob.parent = arm
+        ob.matrix_world = world_matrix
         mod=ob.modifiers.new("Follow rig","ARMATURE"); mod.object=arm
         vg=ob.vertex_groups.new(name=bone_name); vg.add(list(range(len(ob.data.vertices))),1.0,"REPLACE")
     return ob
@@ -360,8 +368,19 @@ bpy.ops.export_scene.gltf(
     filepath=final_glb, export_format="GLB", export_animations=True,
     export_animation_mode="ACTIONS", export_yup=True,
 )
-# Final GLB and editable BLEND are saved above. Preview rendering is kept
-# separate so headless CI does not depend on an EGL/OpenGL device.
+# Render a front orthographic preview (the rig uses Y-up coordinates).
+scene=bpy.context.scene
+scene.render.engine="BLENDER_EEVEE_NEXT"
+scene.render.resolution_x=640; scene.render.resolution_y=900
+scene.render.resolution_percentage=100
+scene.render.image_settings.file_format="PNG"
+bpy.ops.object.camera_add(location=(0.0,0.72,-4.0))
+cam=bpy.context.object; cam.name="Meera preview camera"
+cam.rotation_euler=(0.0, math.pi, 0.0)
+cam.data.type="ORTHO"; cam.data.ortho_scale=1.65
+scene.camera=cam
+scene.render.filepath=os.path.join(out_dir,"meera_preview.png")
+bpy.ops.render.render(write_still=True)
 print("MEERA_FINAL_EXPORTED", final_glb)
 
 print("MEERA_BASE_EXPORTED", glb_path)
