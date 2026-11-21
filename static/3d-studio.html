@@ -27,6 +27,8 @@ label{display:block;margin:16px 0 7px;color:#d9cde8;font-size:13px}select,button
 <p class="muted">Load a rigged GLB file. The studio detects animation clips embedded in the model and lets you preview them on your phone.</p>
 <div class="drop" id="drop"><div style="font-size:30px">♙</div><strong>Import your character</strong><p class="muted">Choose a .glb file with a humanoid rig. Embedded dance clips will appear below.</p><label class="choose" for="modelFile">Choose GLB file</label><input id="modelFile" type="file" accept=".glb,model/gltf-binary"></div>
 <label for="clipSelect">Animation clip</label><select id="clipSelect" disabled><option>No model loaded</option></select>
+<div class="drop" id="animDrop"><div style="font-size:25px">♫</div><strong>Add animation to MEERA</strong><p class="muted">Import a second rigged .glb that contains animation clips. Clips are added to the character above; matching humanoid bone names are required.</p><label class="choose" for="animationFile">Choose animation GLB</label><input id="animationFile" type="file" accept=".glb,model/gltf-binary" disabled></div>
+<p class="muted" id="animationHint">Load MEERA's rigged character first, then add an animation GLB.</p>
 <div class="actions"><button class="primary" id="play" disabled>▶ Play</button><button id="stop" disabled>■ Stop</button></div>
 <div class="actions"><button id="reset" disabled>↺ Reset view</button><button id="clear" disabled>Remove model</button></div>
 <section class="outfit-controls" id="outfitControls">
@@ -58,7 +60,7 @@ const fill=new THREE.DirectionalLight(0xb9a5ff,1.2);fill.position.set(-4,2,-3);s
 const floor=new THREE.Mesh(new THREE.CircleGeometry(2.2,64),new THREE.MeshStandardMaterial({color:0x30263b,roughness:.85}));floor.rotation.x=-Math.PI/2;floor.position.y=-.015;scene.add(floor);
 const grid=new THREE.GridHelper(5,20,0x695777,0x382d47);grid.position.y=-.008;scene.add(grid);
 const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,1,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.88;
-const loader=new GLTFLoader();let model=null,mixer=null,actions=[],active=null,objectUrl=null;
+const loader=new GLTFLoader();let model=null,mixer=null,actions=[],active=null,objectUrl=null,animationUrls=[];
 const outfitDefaults={saree:true,blouse:true,accessories:true};
 let outfitState={...outfitDefaults}, outfitNodes={saree:[],blouse:[],accessories:[]}, outfitSaved={...outfitDefaults};
 const outfitKey='meera-outfit-state-v1';
@@ -83,9 +85,33 @@ function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setS
 function say(text,kind=''){status.textContent=text;status.className='status '+kind}
 function frameModel(root){const box=new THREE.Box3().setFromObject(root);if(box.isEmpty())return;const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());root.position.x-=center.x;root.position.z-=center.z;root.position.y-=box.min.y;const max=Math.max(size.x,size.y,size.z);camera.position.set(0,Math.max(1.1,size.y*.55),Math.max(2.6,max*2.35));controls.target.set(0,size.y*.48,0);controls.update()}
 function stopAnimation(){if(active){active.stop();active=null}}
-function removeModel(){stopAnimation();if(model){scene.remove(model);model.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose()}});model=null}mixer=null;actions=[];outfitNodes={saree:[],blouse:[],accessories:[]};document.querySelector('#nudeMode').checked=false;document.querySelectorAll('[data-layer]').forEach(input=>input.disabled=true);document.querySelector('#nudeMode').disabled=true;document.querySelector('#outfitHint').textContent='Import the MEERA dressed GLB to enable controls. Innerwear is not a separate mesh in this asset.';document.querySelector('#clipSelect').innerHTML='<option>No model loaded</option>';document.querySelector('#clipSelect').disabled=true;['play','stop','reset','clear'].forEach(id=>document.getElementById(id).disabled=true);hint.hidden=false;if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null}say('Waiting for a GLB character file.')}
-async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.glb')){say('Please choose a .glb file. This viewer expects a binary GLB.','bad');return}removeModel();say('Loading '+file.name+'…');objectUrl=URL.createObjectURL(file);try{const gltf=await loader.loadAsync(objectUrl);model=gltf.scene;scene.add(model);detectOutfitNodes(model);frameModel(model);mixer=new THREE.AnimationMixer(model);actions=gltf.animations||[];const select=document.querySelector('#clipSelect');select.innerHTML='';if(actions.length){actions.forEach((clip,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=clip.name||('Animation '+(i+1));select.append(option)});select.disabled=false;active=mixer.clipAction(actions[0]);active.play();document.querySelector('#play').textContent='Ⅱ Pause';say('Loaded '+file.name+' · '+actions.length+' animation clip(s). First clip is playing.','good')}else{select.innerHTML='<option>No embedded animation clips</option>';select.disabled=true;say('Model loaded, but no animation clips were found. This GLB may be rigged but has no dance animation.','bad')}['play','stop','reset','clear'].forEach(id=>document.getElementById(id).disabled=false);hint.hidden=true}catch(err){console.error(err);say('Could not load this GLB: '+(err.message||'unknown error'),'bad');removeModel()}}
+function refreshClipSelect(preferredIndex=0){
+ const select=document.querySelector('#clipSelect');select.innerHTML='';
+ if(!actions.length){select.innerHTML='<option>No animation clips loaded</option>';select.disabled=true;return}
+ actions.forEach((clip,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=clip.name||('Animation '+(i+1));select.append(option)});
+ select.disabled=false;select.value=String(Math.min(preferredIndex,actions.length-1));
+}
+async function addAnimationFile(file){
+ if(!model||!mixer){say('Load MEERA character first, then add an animation GLB.','bad');return}
+ if(!file||!file.name.toLowerCase().endsWith('.glb')){say('Choose an animation .glb file.','bad');return}
+ const url=URL.createObjectURL(file);animationUrls.push(url);
+ say('Reading animation clips from '+file.name+'…');
+ try{
+  const gltf=await loader.loadAsync(url);const incoming=gltf.animations||[];
+  if(!incoming.length){say('No animation clips found in that GLB.','bad');return}
+  const start=actions.length;
+  incoming.forEach((clip,i)=>{const copy=clip.clone();copy.name=(copy.name||('Animation '+(i+1)))+' · '+file.name;actions.push(copy)});
+  refreshClipSelect(start);
+  stopAnimation();active=mixer.clipAction(actions[start]);active.reset().play();
+  document.querySelector('#play').textContent='Ⅱ Pause';
+  document.querySelector('#animationHint').textContent=incoming.length+' clip(s) added from '+file.name+'. If playback is still, the source rig bone names do not match MEERA.';
+  say('Added '+incoming.length+' animation clip(s). Testing the first imported clip on MEERA.','good');
+ }catch(err){console.error(err);say('Could not read animation GLB: '+(err.message||'unknown error'),'bad')}
+}
+function removeModel(){stopAnimation();if(model){scene.remove(model);model.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose()}});model=null}mixer=null;actions=[];animationUrls.forEach(url=>URL.revokeObjectURL(url));animationUrls=[];document.querySelector('#animationFile').disabled=true;document.querySelector('#animationHint').textContent='Load MEERA character first, then add an animation GLB.';outfitNodes={saree:[],blouse:[],accessories:[]};document.querySelector('#nudeMode').checked=false;document.querySelectorAll('[data-layer]').forEach(input=>input.disabled=true);document.querySelector('#nudeMode').disabled=true;document.querySelector('#outfitHint').textContent='Import the MEERA dressed GLB to enable controls. Innerwear is not a separate mesh in this asset.';document.querySelector('#clipSelect').innerHTML='<option>No model loaded</option>';document.querySelector('#clipSelect').disabled=true;['play','stop','reset','clear'].forEach(id=>document.getElementById(id).disabled=true);hint.hidden=false;if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null}say('Waiting for a GLB character file.')}
+async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.glb')){say('Please choose a .glb file. This viewer expects a binary GLB.','bad');return}removeModel();say('Loading '+file.name+'…');objectUrl=URL.createObjectURL(file);try{const gltf=await loader.loadAsync(objectUrl);model=gltf.scene;scene.add(model);detectOutfitNodes(model);frameModel(model);mixer=new THREE.AnimationMixer(model);actions=gltf.animations||[];refreshClipSelect(0);document.querySelector('#animationFile').disabled=false;if(actions.length){active=mixer.clipAction(actions[0]);active.play();document.querySelector('#play').textContent='Ⅱ Pause';say('Loaded '+file.name+' · '+actions.length+' embedded animation clip(s).','good')}else{say('Character loaded. Add an animation GLB below to bring in clips.','good')}['play','stop','reset','clear'].forEach(id=>document.getElementById(id).disabled=false);hint.hidden=true}catch(err){console.error(err);say('Could not load this GLB: '+(err.message||'unknown error'),'bad');removeModel()}}
 document.querySelector('#modelFile').addEventListener('change',e=>loadFile(e.target.files[0]));
+document.querySelector('#animationFile').addEventListener('change',e=>{addAnimationFile(e.target.files[0]);e.target.value=''});
 const drop=document.querySelector('#drop');drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');loadFile(e.dataTransfer.files[0])});
 document.querySelectorAll('[data-layer]').forEach(input=>input.addEventListener('change',()=>{const layer=input.dataset.layer;outfitState[layer]=input.checked;if(document.querySelector('#nudeMode').checked)outfitSaved={...outfitState};else setLayerVisibility(layer,input.checked);persistOutfit()}));
 document.querySelector('#nudeMode').addEventListener('change',e=>{if(e.target.checked){outfitSaved={...outfitState};Object.keys(outfitNodes).forEach(layer=>setLayerVisibility(layer,false))}else{outfitState={...outfitSaved};Object.keys(outfitNodes).forEach(layer=>setLayerVisibility(layer,outfitState[layer]));syncOutfitUI()}persistOutfit()});
