@@ -29,8 +29,8 @@ async function loadAraAnimations(){
  araLoadPromise=(async()=>{
   let source=null;
   try{
-   const ara=await import('https://cdn.jsdelivr.net/npm/ara3d@0/dist/index.js');
-   const defs=ara.ANIMATIONS||[];
+   const ara=await import('https://esm.sh/ara3d@0.11.0?external=three');
+   const defs=Array.isArray(ara.ANIMATIONS)?ara.ANIMATIONS:Object.values(ara.ANIMATIONS||{});
    const wanted=/idle|walk|turn|wave|cheer|laugh|talk|clap|dance|point|thumbs up|bow|sit down|sit idle|stand up|lie down|sleep|phone call|texting|take a picture|lean on wall|look around|sweep|pick up|put down|use.?press|open door/i;
    const excluded=/combat|shooter|weapon|vehicle|sports|swim|climb|parachut|run|sprint|strafe|dodge|vault|roll|jump|fall|hit|death/i;
    const selected=defs.filter(def=>wanted.test((def.name||def.id||'').trim())&&!excluded.test([def.group,def.category].filter(Boolean).join(' ')));
