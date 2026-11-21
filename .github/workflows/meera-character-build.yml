@@ -18,6 +18,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Install headless rendering libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1 libxrender1 libxi6 libxkbcommon0
+
       - name: Install Blender 4.5.9
         run: |
           curl -L https://download.blender.org/release/Blender4.5/blender-4.5.9-linux-x64.tar.xz -o /tmp/blender.tar.xz
