@@ -369,12 +369,32 @@ scene.render.engine="BLENDER_EEVEE_NEXT"
 scene.render.resolution_x=640; scene.render.resolution_y=900
 scene.render.resolution_percentage=100
 scene.render.image_settings.file_format="PNG"
-bpy.ops.object.camera_add(location=(0.0,-4.0,0.72))
+bpy.ops.object.camera_add(location=(0.0,4.0,0.72))
 cam=bpy.context.object; cam.name="Meera preview camera"
 direction=mathutils.Vector((0.0,0.0,0.72))-cam.location
 cam.rotation_euler=direction.to_track_quat("-Z","Y").to_euler()
 cam.data.type="ORTHO"; cam.data.ortho_scale=1.65
 scene.camera=cam
+# Soft studio lighting from the character's front, plus a gentle fill.
+scene.world.use_nodes=True
+scene.world.node_tree.nodes["Background"].inputs["Color"].default_value=(0.32,0.32,0.32,1)
+scene.world.node_tree.nodes["Background"].inputs["Strength"].default_value=0.65
+for name, location, power, size in (
+    ("Key light", (0.0,4.0,2.5), 1500, 4.0),
+    ("Fill light", (-2.5,2.0,1.5), 700, 3.0),
+):
+    bpy.ops.object.light_add(type="AREA", location=location)
+    light=bpy.context.object; light.name=name
+    light.data.energy=power; light.data.shape="DISK"; light.data.size=size
+    aim=mathutils.Vector((0.0,0.0,0.75))-light.location
+    light.rotation_euler=aim.to_track_quat("-Z","Y").to_euler()
+# Give the base mesh a natural, neutral skin tone for the preview/export.
+for material in human.data.materials:
+    if material and material.use_nodes:
+        shader=material.node_tree.nodes.get("Principled BSDF")
+        if shader:
+            shader.inputs["Base Color"].default_value=(0.56,0.34,0.24,1)
+            shader.inputs["Roughness"].default_value=0.72
 scene.render.filepath=os.path.join(out_dir,"meera_preview.png")
 bpy.ops.render.render(write_still=True)
 print("MEERA_FINAL_EXPORTED", final_glb)
