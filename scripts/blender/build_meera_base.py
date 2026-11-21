@@ -356,6 +356,14 @@ for obj in bpy.context.scene.objects:
 arm.select_set(True)
 bpy.context.view_layer.objects.active = arm
 
+# Give the base mesh a natural, neutral skin tone for the preview/export.
+for material in human.data.materials:
+    if material and material.use_nodes:
+        shader=material.node_tree.nodes.get("Principled BSDF")
+        if shader:
+            shader.inputs["Base Color"].default_value=(0.56,0.34,0.24,1)
+            shader.inputs["Roughness"].default_value=0.72
+
 final_blend = os.path.join(out_dir, "meera_final.blend")
 final_glb = os.path.join(out_dir, "meera_final.glb")
 bpy.ops.wm.save_as_mainfile(filepath=final_blend)
@@ -388,13 +396,6 @@ for name, location, power, size in (
     light.data.energy=power; light.data.shape="DISK"; light.data.size=size
     aim=mathutils.Vector((0.0,0.0,0.75))-light.location
     light.rotation_euler=aim.to_track_quat("-Z","Y").to_euler()
-# Give the base mesh a natural, neutral skin tone for the preview/export.
-for material in human.data.materials:
-    if material and material.use_nodes:
-        shader=material.node_tree.nodes.get("Principled BSDF")
-        if shader:
-            shader.inputs["Base Color"].default_value=(0.56,0.34,0.24,1)
-            shader.inputs["Roughness"].default_value=0.72
 scene.render.filepath=os.path.join(out_dir,"meera_preview.png")
 bpy.ops.render.render(write_still=True)
 print("MEERA_FINAL_EXPORTED", final_glb)
