@@ -11,6 +11,7 @@ import sys
 import os
 import importlib
 import math
+import mathutils
 
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 if len(args) < 2:
@@ -186,4 +187,196 @@ bpy.ops.export_scene.gltf(
     export_animation_mode="ACTIONS",
     export_yup=True,
 )
+
+# Stage 2: dress the SAME adult base as Meera. All garments are separate,
+# non-transparent meshes and remain attached to the existing humanoid rig.
+def make_mat(name, color, metallic=0.0, roughness=0.62):
+    mat = bpy.data.materials.new(name)
+    mat.diffuse_color = (*color, 1.0)
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes.get("Principled BSDF")
+    bsdf.inputs["Base Color"].default_value = (*color, 1.0)
+    bsdf.inputs["Metallic"].default_value = metallic
+    bsdf.inputs["Roughness"].default_value = roughness
+    return mat
+
+ivory = make_mat("Saree | warm ivory", (0.88, 0.82, 0.69))
+pink = make_mat("Saree border | vivid magenta", (0.82, 0.015, 0.20))
+lime = make_mat("Blouse | lime green", (0.42, 0.68, 0.08))
+black = make_mat("Hair | natural black", (0.018, 0.012, 0.01))
+silver = make_mat("Jewellery | silver", (0.65, 0.68, 0.72), 0.78, 0.24)
+skin_accent = make_mat("Bindi | deep maroon", (0.22, 0.008, 0.025))
+
+def mesh_object(name, verts, faces, material, bone_name=None):
+    mesh = bpy.data.meshes.new(name + "Mesh")
+    mesh.from_pydata(verts, [], faces)
+    mesh.materials.append(material)
+    mesh.update()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    if bone_name and bone_name in arm.data.bones:
+        obj.parent = arm
+        mod = obj.modifiers.new("Meera rig", "ARMATURE")
+        mod.object = arm
+        group = obj.vertex_groups.new(name=bone_name)
+        group.add(list(range(len(verts))), 1.0, "REPLACE")
+    return obj
+
+# Saree lower drape: a continuous modest wrap from waist to ankles.
+sv, sf = [], []
+rows, segs = 18, 96
+for j in range(rows + 1):
+    t = j / rows
+    y = 0.12 + 0.72 * t
+    radius = 0.205 + 0.018 * (1.0 - t)
+    for i in range(segs):
+        a = 2.0 * math.pi * i / segs
+        pleat = 0.008 * math.cos(12.0 * a)
+        r = radius + pleat
+        sv.append((math.cos(a) * r, y, 0.075 + math.sin(a) * r * 0.78))
+for j in range(rows):
+    for i in range(segs):
+        a = j * segs + i
+        b = j * segs + (i + 1) % segs
+        sf.append((a, b, b + segs, a + segs))
+skirt = mesh_object("Saree | wrapped lower drape", sv, sf, ivory, root or spine)
+skirt.modifiers.new("Soft cloth surface", "SOLIDIFY").thickness = 0.006
+
+# Pink hem and waist borders, generated as closed bands.
+def ring_band(name, y0, y1, radius, material):
+    v, f = [], []
+    n = 96
+    for y in (y0, y1):
+        for i in range(n):
+            a = 2 * math.pi * i / n
+            v.append((math.cos(a) * radius, y, 0.075 + math.sin(a) * radius * 0.78))
+    for i in range(n):
+        f.append((i, (i+1)%n, (i+1)%n+n, i+n))
+    ob = mesh_object(name, v, f, material, root or spine)
+    ob.modifiers.new("Band thickness", "SOLIDIFY").thickness = 0.009
+    return ob
+ring_band("Saree | magenta hem", 0.105, 0.135, 0.222, pink)
+ring_band("Saree | magenta waist trim", 0.815, 0.838, 0.207, pink)
+
+# Fitted lime blouse shell, with a modest neckline and short sleeves.
+bv, bf = [], []
+br, bn = 10, 64
+for j in range(br + 1):
+    t = j / br
+    y = 0.91 + 0.255 * t
+    rx = 0.145 - 0.018 * t
+    rz = 0.112 - 0.014 * t
+    for i in range(bn):
+        a = 2 * math.pi * i / bn
+        bv.append((math.cos(a) * rx, y, 0.075 + math.sin(a) * rz))
+for j in range(br):
+    for i in range(bn):
+        a = j*bn+i; b=j*bn+(i+1)%bn
+        bf.append((a,b,b+bn,a+bn))
+blouse = mesh_object("Blouse | lime green fitted shell", bv, bf, lime, spine or root)
+blouse.modifiers.new("Blouse fabric", "SOLIDIFY").thickness = 0.008
+
+# Saree pallu: a broad folded panel over the shoulder and diagonally across
+# the front torso. Front of the character is the negative-Z side.
+pv, pf = [], []
+pr, pc = 28, 16
+for j in range(pr + 1):
+    t = j / pr
+    cx = -0.095 + 0.20 * t
+    cy = 1.205 - 0.59 * t
+    cz = -0.115 - 0.045 * math.sin(math.pi*t)
+    width = 0.255 * (0.88 + 0.12 * math.sin(math.pi*t))
+    for i in range(pc + 1):
+        u = i / pc - 0.5
+        pv.append((cx + u*width, cy + 0.025*math.sin(u*math.pi*2),
+                   cz - 0.018*(1.0-4.0*u*u)))
+for j in range(pr):
+    for i in range(pc):
+        a=j*(pc+1)+i; b=a+1
+        pf.append((a,b,b+pc+1,a+pc+1))
+pallu = mesh_object("Saree | draped shoulder pallu", pv, pf, ivory, spine or root)
+pallu.modifiers.new("Pallu fabric thickness", "SOLIDIFY").thickness = 0.008
+pallu.modifiers.new("Pallu soft folds", "SUBSURF").levels = 1
+
+# Magenta edging along both long edges of the pallu.
+for side in (-0.5, 0.5):
+    curve = bpy.data.curves.new("Pallu border curve", "CURVE")
+    curve.dimensions = "3D"
+    curve.bevel_depth = 0.008
+    curve.bevel_resolution = 3
+    spline = curve.splines.new("POLY")
+    spline.points.add(pr)
+    for j in range(pr + 1):
+        t=j/pr; cx=-0.095+0.20*t; cy=1.205-0.59*t
+        cz=-0.115-0.045*math.sin(math.pi*t)
+        spline.points[j].co=(cx+side*0.255*(0.88+0.12*math.sin(math.pi*t)),
+                             cy+0.025*math.sin(side*math.pi*2),cz-0.018,1)
+    edge=bpy.data.objects.new("Saree | pallu magenta edge",curve)
+    bpy.context.collection.objects.link(edge); edge.data.materials.append(pink)
+    edge.parent=arm
+    if spine and spine in arm.data.bones:
+        vg=edge.vertex_groups.new(name=spine)
+
+# Hair bun and centre-parted cap; restrained jewellery and bindi.
+def uv_sphere(name, location, scale, material, bone_name=None):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=16, location=location)
+    ob=bpy.context.object; ob.name=name; ob.scale=scale
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    ob.data.materials.append(material)
+    if bone_name and bone_name in arm.data.bones:
+        ob.parent=arm
+        mod=ob.modifiers.new("Follow head rig","ARMATURE"); mod.object=arm
+        vg=ob.vertex_groups.new(name=bone_name); vg.add(list(range(len(ob.data.vertices))),1.0,"REPLACE")
+    return ob
+uv_sphere("Hair | gathered bun", (0,1.355,0.205), (0.105,0.105,0.085), black, head)
+uv_sphere("Bindi", (0,1.245,-0.148), (0.018,0.025,0.009), skin_accent, head)
+
+def torus_accessory(name, location, major, minor, material, bone_name=None):
+    bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor,
+                                    major_segments=48, minor_segments=10, location=location)
+    ob=bpy.context.object; ob.name=name; ob.data.materials.append(material)
+    if bone_name and bone_name in arm.data.bones:
+        ob.parent=arm
+        mod=ob.modifiers.new("Follow rig","ARMATURE"); mod.object=arm
+        vg=ob.vertex_groups.new(name=bone_name); vg.add(list(range(len(ob.data.vertices))),1.0,"REPLACE")
+    return ob
+torus_accessory("Necklace | silver chain", (0,1.155,-0.135), 0.105, 0.006, silver, head)
+uv_sphere("Necklace | pendant", (0,1.045,-0.145), (0.026,0.038,0.012), silver, spine or head)
+torus_accessory("Bangle | left", (-0.265,0.84,-0.015), 0.043, 0.006, silver, upper_arm_l)
+torus_accessory("Bangle | right", (0.265,0.84,-0.015), 0.043, 0.006, silver, upper_arm_r)
+
+# Keep all new costume objects in the final export selection.
+bpy.ops.object.select_all(action="DESELECT")
+for obj in bpy.context.scene.objects:
+    if obj == arm or obj == human or obj.name.startswith((
+        "Saree", "Blouse", "Hair", "Bindi", "Necklace", "Bangle"
+    )):
+        obj.select_set(True)
+arm.select_set(True)
+bpy.context.view_layer.objects.active = arm
+
+final_blend = os.path.join(out_dir, "meera_final.blend")
+final_glb = os.path.join(out_dir, "meera_final.glb")
+bpy.ops.wm.save_as_mainfile(filepath=final_blend)
+bpy.ops.export_scene.gltf(
+    filepath=final_glb, export_format="GLB", export_animations=True,
+    export_animation_mode="ACTIONS", export_yup=True,
+)
+# Create a compact preview render for the repository artifact.
+scene=bpy.context.scene
+scene.render.engine="BLENDER_EEVEE_NEXT"
+scene.render.resolution_x=640; scene.render.resolution_y=900
+scene.render.resolution_percentage=100
+scene.render.image_settings.file_format="PNG"
+scene.world.color=(0.12,0.12,0.12)
+bpy.ops.object.camera_add(location=(2.5,0.95,-3.6))
+cam=bpy.context.object; cam.name="Meera preview camera"
+direction=mathutils.Vector((0,0.72,0.02))-cam.location
+cam.rotation_euler=direction.to_track_quat("-Z","Y").to_euler()
+cam.data.type="ORTHO"; cam.data.ortho_scale=1.9
+scene.camera=cam
+scene.render.filepath=os.path.join(out_dir,"meera_preview.png")
+bpy.ops.render.render(write_still=True)
+print("MEERA_FINAL_EXPORTED", final_glb)
+
 print("MEERA_BASE_EXPORTED", glb_path)
